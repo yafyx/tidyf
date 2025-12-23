@@ -10,7 +10,6 @@
  */
 
 import * as p from "@clack/prompts";
-import { homedir } from "os";
 import { isAbsolute, resolve } from "path";
 import color from "picocolors";
 import {
@@ -27,12 +26,13 @@ import type {
   OrganizationProposal,
   OrganizeOptions,
 } from "../types/organizer.ts";
-import { fileExists, formatFileSize, moveFile } from "../utils/files.ts";
+import { formatFileSize, moveFile } from "../utils/files.ts";
 import {
   getCategoryIcon,
   getFileIcon,
   getStatusIndicator,
 } from "../utils/icons.ts";
+import { pickModel } from "./modelPicker.ts";
 
 /**
  * Display a single proposal
@@ -338,6 +338,11 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
             hint: "Ask AI to re-analyze with different instructions",
           },
           {
+            value: "regenerate_with_model",
+            label: "Regenerate analysis (different model)",
+            hint: "Re-analyze using another provider/model",
+          },
+          {
             value: "cancel",
             label: "Cancel",
           },
@@ -378,6 +383,39 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
               targetDir: targetPath,
               instructions: newInstructions || undefined,
               model: parseModelString(options.model),
+            });
+            spinner.stop("Analysis complete");
+            displayAllProposals(proposal);
+          } catch (error: any) {
+            spinner.stop("Analysis failed");
+            p.log.error(error.message);
+          }
+          break;
+        }
+
+        case "regenerate_with_model": {
+          const newInstructions = await p.text({
+            message:
+              "Enter additional instructions for AI (or press Enter to skip):",
+            placeholder: "e.g., Keep all PDFs together, sort images by date",
+          });
+
+          if (p.isCancel(newInstructions)) {
+            break;
+          }
+
+          const pickedModel = await pickModel();
+          if (!pickedModel) {
+            break;
+          }
+
+          spinner.start(`Re-analyzing with ${pickedModel.provider}/${pickedModel.model}...`);
+          try {
+            proposal = await analyzeFiles({
+              files,
+              targetDir: targetPath,
+              instructions: newInstructions || undefined,
+              model: pickedModel,
             });
             spinner.stop("Analysis complete");
             displayAllProposals(proposal);

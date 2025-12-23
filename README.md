@@ -43,6 +43,8 @@ AI-powered file organizer CLI using [opencode.ai](https://opencode.ai)
 ■  What would you like to do?
 │  ● Apply all 15 moves
 │  ○ Select individually
+│  ○ Regenerate analysis
+│  ○ Regenerate analysis (different model)
 │  ○ Cancel
 │
 └  Organization complete!
@@ -217,6 +219,11 @@ Edit this file to customize AI behavior for your workflow.
 2. **Analyzes with AI** - Sends file info to AI with your configured rules
 3. **Proposes organization** - Shows categorization with confidence levels
 4. **Confirms with you** - Presents interactive UI for approval
+   - Apply all moves
+   - View file details
+   - Regenerate analysis (optional: with different instructions)
+   - Regenerate analysis (different model) — choose another provider/model
+   - Cancel
 5. **Moves files** - Organizes files into target directory structure
 
 ## Examples
