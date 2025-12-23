@@ -31,13 +31,13 @@ import type {
  * Main config command
  */
 export async function configCommand(options: ConfigOptions): Promise<void> {
-	p.intro(color.bgCyan(color.black(" tidy config ")));
+	p.intro(color.bgCyan(color.black(" tidyf config ")));
 
 	// Initialize global config if needed
 	initGlobalConfig();
 
 	// Determine scope
-	const scope = options.global ? "global" : "local";
+	const scope = options.local ? "local" : "global";
 	const configPath =
 		scope === "global" ? getGlobalConfigPath() : getLocalConfigPath();
 	const rulesPath =
