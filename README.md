@@ -1,9 +1,9 @@
-# tidy
+# tidyf
 
 AI-powered file organizer CLI using [opencode.ai](https://opencode.ai)
 
 ```
-┌   tidy
+┌   tidyf
 │
 ◆  Scanning ~/Downloads...
 │    Found 12 files
@@ -30,7 +30,7 @@ AI-powered file organizer CLI using [opencode.ai](https://opencode.ai)
 - **Interactive CLI** - Beautiful terminal UI with confirmation prompts
 - **Customizable rules** - Edit `~/.tidy/rules.md` to customize organization rules
 - **Conflict handling** - Smart handling of duplicate files
-- **Multiple aliases** - Use `tidy` or `td`
+- **Multiple aliases** - Use `tidyf` or `td`
 
 ## Installation
 
@@ -55,7 +55,7 @@ Then authenticate:
 opencode auth
 ```
 
-### Install tidy
+### Install tidyf
 
 ```bash
 # bun (recommended)
@@ -77,53 +77,53 @@ yarn global add tidyfiles
 
 ```bash
 # Organize Downloads folder (default)
-tidy
+tidyf
 
 # Organize specific folder
-tidy ~/Desktop
+tidyf ~/Desktop
 
 # Dry run (preview only)
-tidy -d
+tidyf -d
 
 # Skip confirmation prompts
-tidy -y
+tidyf -y
 
 # Recursive scan
-tidy -r
+tidyf -r
 
 # Specify target directory
-tidy --target ~/Sorted
+tidyf --target ~/Sorted
 ```
 
 ### Watch Mode
 
 ```bash
 # Watch configured folders
-tidy watch
+tidyf watch
 
 # Watch specific folder
-tidy watch ~/Downloads
+tidyf watch ~/Downloads
 
 # Auto-apply without confirmation
-tidy watch --auto
+tidyf watch --auto
 
 # Queue files for batch review
-tidy watch --queue
+tidyf watch --queue
 
 # Custom delay before processing (ms)
-tidy watch --delay 5000
+tidyf watch --delay 5000
 ```
 
 ### Configure
 
 ```bash
 # Interactive configuration
-tidy config
+tidyf config
 ```
 
 ## Configuration
 
-On first run, tidy creates `~/.tidy/` directory with configuration files:
+On first run, tidyf creates `~/.tidy/` directory with configuration files:
 
 ### `~/.tidy/settings.json` - Settings
 
@@ -156,9 +156,9 @@ Edit this file to customize AI behavior for your workflow.
 
 | Command | Description |
 |---------|-------------|
-| `tidy [path]` | Organize files in path (default: ~/Downloads) |
-| `tidy watch [paths...]` | Watch folders for new files |
-| `tidy config` | Configure models and settings |
+| `tidyf [path]` | Organize files in path (default: ~/Downloads) |
+| `tidyf watch [paths...]` | Watch folders for new files |
+| `tidyf config` | Configure models and settings |
 
 ## Options
 
@@ -195,8 +195,8 @@ Edit this file to customize AI behavior for your workflow.
 ### Basic Organization
 
 ```bash
-$ tidy ~/Downloads
-┌   tidy
+$ tidyf ~/Downloads
+┌   tidyf
 │
 ◆  Scanning ~/Downloads...
 │    Found 5 files
@@ -218,8 +218,8 @@ $ tidy ~/Downloads
 ### Watch Mode
 
 ```bash
-$ tidy watch ~/Downloads --auto
-┌   tidy watch
+$ tidyf watch ~/Downloads --auto
+┌   tidyf watch
 │
 ◇  Watching directories:
 │    ~/Downloads

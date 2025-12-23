@@ -1,49 +1,49 @@
 {
-  "name": "tidyfiles",
-  "version": "1.0.0",
-  "description": "AI-powered file organizer using opencode.ai",
-  "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "tidy": "./dist/cli.js",
-    "td": "./dist/cli.js"
-  },
-  "scripts": {
-    "start": "node dist/cli.js",
-    "dev": "bun --watch src/cli.ts",
-    "build": "bun build src/cli.ts --outdir=dist --target=node --format=esm && bun build src/index.ts --outdir=dist --target=node --format=esm",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "bun run build"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [
-    "file-organizer",
-    "ai",
-    "opencode",
-    "cli",
-    "downloads",
-    "tidy",
-    "automation"
-  ],
-  "author": "",
-  "license": "MIT",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "dependencies": {
-    "@clack/prompts": "^0.11.0",
-    "@opencode-ai/sdk": "^1.0.155",
-    "chokidar": "^3.5.3",
-    "commander": "^12.1.0",
-    "mime-types": "^2.1.35",
-    "picocolors": "^1.1.1"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/mime-types": "^2.1.4",
-    "typescript": "^5.7.2"
-  }
+	"name": "tidyfiles",
+	"version": "1.0.0",
+	"description": "AI-powered file organizer using opencode.ai",
+	"type": "module",
+	"main": "dist/index.js",
+	"bin": {
+		"tidyf": "./dist/cli.js",
+		"td": "./dist/cli.js"
+	},
+	"scripts": {
+		"start": "node dist/cli.js",
+		"dev": "bun --watch src/cli.ts",
+		"build": "bun build src/cli.ts --outdir=dist --target=node --format=esm && bun build src/index.ts --outdir=dist --target=node --format=esm",
+		"typecheck": "tsc --noEmit",
+		"prepublishOnly": "bun run build"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"keywords": [
+		"file-organizer",
+		"ai",
+		"opencode",
+		"cli",
+		"downloads",
+		"tidy",
+		"automation"
+	],
+	"author": "",
+	"license": "MIT",
+	"files": [
+		"dist",
+		"src"
+	],
+	"dependencies": {
+		"@clack/prompts": "^0.11.0",
+		"@opencode-ai/sdk": "^1.0.155",
+		"chokidar": "^3.5.3",
+		"commander": "^12.1.0",
+		"mime-types": "^2.1.35",
+		"picocolors": "^1.1.1"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/mime-types": "^2.1.4",
+		"typescript": "^5.7.2"
+	}
 }
