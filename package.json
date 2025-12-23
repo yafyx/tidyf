@@ -6,7 +6,8 @@
 	"main": "dist/index.js",
 	"bin": {
 		"tidyf": "./dist/cli.js",
-		"td": "./dist/cli.js"
+		"td": "./dist/cli.js",
+		"tidyfiles": "./dist/cli.js"
 	},
 	"scripts": {
 		"start": "node dist/cli.js",
