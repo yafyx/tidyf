@@ -2,24 +2,50 @@
 
 AI-powered file organizer CLI using [opencode.ai](https://opencode.ai)
 
-```
-┌   tidyf
+```text
+┌   tidyf 
 │
-◆  Scanning ~/Downloads...
-│    Found 12 files
+●  Source: ~/Downloads
 │
-◇  Analyzing files with AI...
+●  Target: ~/Downloads/Organized
 │
-◆  Organization proposal:
-│    📄 report-2024.pdf → Documents/Work
-│    🖼️  screenshot.png → Images/Screenshots
-│    📦 project.zip → Archives
+◇  Found 15 files
 │
-◆  What would you like to do?
-│  ● Apply all
+●  Total size: 79 MB
+│
+◇  Analysis complete
+│
+●  Proposed organization for 15 files:
+│
+│  Strategy: Primary categorization by file type and MIME type, secondary categorization 
+│  by filename context and naming patterns. Documents go to Work, books 
+│  to Education, and camera images to Photos.
+│
+●  📄 Documents (9 files)
+│
+│  [1] 📄 financial-report.pdf (596 KB)
+│      → ~/Downloads/Organized/Documents/Work/financial-report.pdf
+│      📄 Documents/Work 90%
+│      Document with financial context and report keywords
+│
+│  [2] 📄 research-paper.pdf (448.6 KB)
+│      → ~/Downloads/Organized/Documents/Education/research-paper.pdf
+│      📄 Documents/Education 85%
+│      Technical document, appears to be educational content
+│
+●  🖼️ Images (4 files)
+│
+│  [12] 🖼️ vacation-photo.jpg (361.1 KB)
+│      → ~/Downloads/Organized/Images/Photos/vacation-photo.jpg
+│      🖼️ Images/Photos 95%
+│      Image with metadata indicating it was taken with a camera
+│
+■  What would you like to do?
+│  ● Apply all 15 moves
 │  ○ Select individually
 │  ○ Cancel
-└
+│
+└  Organization complete!
 ```
 
 ## Features
@@ -198,24 +224,68 @@ Edit this file to customize AI behavior for your workflow.
 ### Basic Organization
 
 ```bash
-$ tidyf ~/Downloads
-┌   tidyf
+$ tidyf
+┌   tidyf 
 │
-◆  Scanning ~/Downloads...
-│    Found 5 files
+●  Source: ~/Downloads
 │
-◇  Analyzing files with AI...
+●  Target: ~/Downloads/Organized
 │
-◆  Organization proposal:
-│    📄 invoice-2024.pdf → Documents/Receipts
-│    🖼️  vacation-photo.jpg → Images/Photos
-│    📦 backup.zip → Archives
-│    🎵 podcast.mp3 → Audio/Podcasts
-│    💻 installer.dmg → Applications/Installers
+◇  Found 12 files
 │
-◆  Apply these changes?
-│  ● Yes
-└
+●  Total size: 45 MB
+│
+◇  Analysis complete
+│
+●  Proposed organization for 12 files:
+│
+│  Strategy: Primary categorization by file type and MIME type, secondary categorization 
+│  by filename context and naming patterns...
+│
+●  📄 Documents (5 files)
+│
+│  [1] 📄 project-proposal.pdf (245 KB)
+│      → ~/Downloads/Organized/Documents/Work/project-proposal.pdf
+│      📄 Documents/Work 95%
+│      Business document with project keywords
+│
+■  What would you like to do?
+│  ● Apply all 12 moves
+│  ○ Select individually
+│  ○ Cancel
+│
+└  Organization complete!
+```
+
+### Interactive Configuration
+
+```bash
+$ tidyf config
+┌   tidyf config 
+│
+●  Configuring global settings
+│
+│  Config: ~/.tidy/settings.json
+│
+◇  What would you like to configure?
+│  AI Model
+│
+◇  Fetched 2 providers
+│
+●  Current Model: opencode/big-pickle
+│
+◇  Select AI provider:
+│  OpenCode Zen
+│
+◇  Select model:
+│  glm-4.7-free
+│
+◆  Model set to opencode/glm-4.7-free
+│
+◇  What would you like to configure?
+│  Done
+│
+└  Configuration saved!
 ```
 
 ### Watch Mode
