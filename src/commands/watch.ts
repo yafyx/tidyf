@@ -120,11 +120,13 @@ export async function watchCommand(options: WatchOptions): Promise<void> {
 	if (options.paths && options.paths.length > 0) {
 		watchPaths = options.paths.map((p) => expandPath(p));
 	} else if (config.folders && config.folders.length > 0) {
+		// Use watchEnabled config or individual folder watch settings
+		const watchEnabled = config.watchEnabled ?? false;
 		watchPaths = config.folders
-			.filter((f) => f.watch !== false)
+			.filter((f) => f.watch ?? watchEnabled)
 			.flatMap((f) => f.sources.map((s) => expandPath(s)));
 	} else {
-		watchPaths = [expandPath("~/Downloads")];
+		watchPaths = [expandPath(config.defaultSource || "~/Downloads")];
 	}
 
 	// Determine target directory

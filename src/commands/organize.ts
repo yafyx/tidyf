@@ -235,7 +235,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
 
 	// Determine source directory
 	const sourcePath = resolvePath(
-		options.path || config.folders?.[0]?.sources?.[0] || "~/Downloads",
+		options.path || config.defaultSource || config.folders?.[0]?.sources?.[0] || "~/Downloads",
 	);
 
 	// Determine target directory

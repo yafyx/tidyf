@@ -42,8 +42,12 @@ export interface CategoryRule {
 export interface TidyConfig {
 	/** Model for file analysis */
 	organizer?: ModelSelection;
+	/** Default source directory */
+	defaultSource?: string;
 	/** Default target directory */
 	defaultTarget?: string;
+	/** Whether watch mode is enabled by default */
+	watchEnabled?: boolean;
 	/** Folder rules */
 	folders?: FolderRule[];
 	/** Category rules (hints for AI) */

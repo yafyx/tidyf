@@ -23,10 +23,11 @@ program
 	.option("-y, --yes", "Skip confirmation prompts and apply all")
 	.option("-r, --recursive", "Scan subdirectories")
 	.option("--depth <n>", "Max subdirectory depth to scan", "1")
+	.option("-s, --source <path>", "Source directory to organize")
 	.option("-t, --target <path>", "Target directory for organized files")
 	.option("-m, --model <id>", "Override model (provider/model)")
 	.action(async (path, options) => {
-		await organizeCommand({ path, ...options });
+		await organizeCommand({ path: path || options.source, ...options });
 	});
 
 // Watch command - monitor folders for new files
