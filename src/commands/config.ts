@@ -46,13 +46,13 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 	p.log.info(`Configuring ${color.bold(scope)} settings`);
 	p.log.message(color.dim(`Config: ${configPath}`));
 
-	// Show current config
-	const currentConfig = readConfig(configPath);
-	const effectiveConfig = resolveConfig();
-
 	// Main menu loop
 	let done = false;
 	while (!done) {
+		// Re-read config each iteration to show updated values
+		const currentConfig = readConfig(configPath);
+		const effectiveConfig = resolveConfig();
+
 		const action = await p.select({
 			message: "What would you like to configure?",
 			options: [
