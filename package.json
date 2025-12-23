@@ -1,5 +1,5 @@
 {
-	"name": "tidyfiles",
+	"name": "tidyf",
 	"version": "1.0.0",
 	"description": "AI-powered file organizer using opencode.ai",
 	"type": "module",
@@ -8,6 +8,14 @@
 		"tidyf": "./dist/cli.js",
 		"td": "./dist/cli.js",
 		"tidyfiles": "./dist/cli.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/yafyx/tidyf.git"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
 	},
 	"scripts": {
 		"start": "node dist/cli.js",

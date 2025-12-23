@@ -59,16 +59,16 @@ opencode auth
 
 ```bash
 # bun (recommended)
-bun install -g tidyfiles
+bun install -g tidyf
 
 # npm
-npm install -g tidyfiles
+npm install -g tidyf
 
 # pnpm
-pnpm install -g tidyfiles
+pnpm install -g tidyf
 
 # yarn
-yarn global add tidyfiles
+yarn global add tidyf
 ```
 
 ## Usage
