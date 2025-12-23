@@ -130,9 +130,11 @@ On first run, tidyf creates `~/.tidy/` directory with configuration files:
 ```json
 {
   "organizer": { "provider": "opencode", "model": "claude-sonnet-4-5" },
+  "defaultSource": "~/Downloads",
   "defaultTarget": "~/Documents/Organized",
+  "watchEnabled": false,
   "folders": [
-    { "sources": ["~/Downloads"], "target": "~/Documents/Organized", "watch": true }
+    { "sources": ["~/Downloads"], "target": "~/Documents/Organized", "watch": false }
   ],
   "ignore": [".DS_Store", "*.tmp", "*.partial", "*.crdownload"]
 }
@@ -169,6 +171,7 @@ Edit this file to customize AI behavior for your workflow.
 | `-d, --dry-run` | Preview changes without moving files |
 | `-y, --yes` | Skip confirmation prompts |
 | `-r, --recursive` | Scan subdirectories |
+| `-s, --source <path>` | Source directory to organize |
 | `-t, --target <path>` | Specify target directory |
 | `-m, --model <id>` | Override AI model |
 | `-V, --version` | Show version number |

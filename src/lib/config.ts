@@ -20,12 +20,14 @@ const DEFAULT_MODEL: ModelSelection = {
 
 const DEFAULT_CONFIG: TidyConfig = {
   organizer: DEFAULT_MODEL,
+  defaultSource: "~/Downloads",
   defaultTarget: "~/Documents/Organized",
+  watchEnabled: false,
   folders: [
     {
       sources: ["~/Downloads"],
       target: "~/Documents/Organized",
-      watch: true,
+      watch: false,
     },
   ],
   ignore: [

@@ -62,6 +62,11 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 					hint: `Current: ${effectiveConfig.organizer?.provider}/${effectiveConfig.organizer?.model}`,
 				},
 				{
+					value: "source",
+					label: "Default Source Directory",
+					hint: effectiveConfig.defaultSource || "Not set",
+				},
+				{
 					value: "target",
 					label: "Default Target Directory",
 					hint: effectiveConfig.defaultTarget || "Not set",
@@ -75,6 +80,11 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 					value: "content",
 					label: "Content Reading",
 					hint: effectiveConfig.readContent ? "Enabled" : "Disabled",
+				},
+				{
+					value: "watch",
+					label: "Watch Mode",
+					hint: effectiveConfig.watchEnabled ? "Enabled" : "Disabled",
 				},
 				{
 					value: "rules",
@@ -106,6 +116,9 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 			case "model":
 				await configureModel(configPath, currentConfig);
 				break;
+			case "source":
+				await configureSource(configPath, currentConfig);
+				break;
 			case "target":
 				await configureTarget(configPath, currentConfig);
 				break;
@@ -114,6 +127,9 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 				break;
 			case "content":
 				await configureContent(configPath, currentConfig);
+				break;
+			case "watch":
+				await configureWatch(configPath, currentConfig);
 				break;
 			case "rules":
 				await configureRules(rulesPath);
@@ -302,6 +318,34 @@ async function configureModel(
 }
 
 /**
+ * Configure source directory
+ */
+async function configureSource(
+	configPath: string,
+	config: TidyConfig,
+): Promise<void> {
+	const source = await p.text({
+		message: "Enter default source directory to organize files from:",
+		initialValue: config.defaultSource || "~/Downloads",
+		placeholder: "~/Downloads",
+		validate: (value) => {
+			if (!value) {
+				return "Source directory is required";
+			}
+		},
+	});
+
+	if (p.isCancel(source)) {
+		return;
+	}
+
+	config.defaultSource = source;
+	writeConfig(configPath, config);
+
+	p.log.success(`Source directory set to ${color.cyan(source)}`);
+}
+
+/**
  * Configure target directory
  */
 async function configureTarget(
@@ -449,6 +493,30 @@ async function configureContent(
 }
 
 /**
+ * Configure watch mode
+ */
+async function configureWatch(
+	configPath: string,
+	config: TidyConfig,
+): Promise<void> {
+	const enabled = await p.confirm({
+		message: "Enable watch mode by default? (Auto-organize new files in source directory)",
+		initialValue: config.watchEnabled ?? false,
+	});
+
+	if (p.isCancel(enabled)) {
+		return;
+	}
+
+	config.watchEnabled = enabled;
+	writeConfig(configPath, config);
+
+	p.log.success(
+		`Watch mode ${enabled ? color.green("enabled") : color.yellow("disabled")}`,
+	);
+}
+
+/**
  * Configure rules (open in editor hint)
  */
 async function configureRules(rulesPath: string): Promise<void> {
@@ -500,10 +568,16 @@ function viewConfig(config: TidyConfig, scope: string): void {
 		`${color.bold("AI Model:")} ${config.organizer?.provider}/${config.organizer?.model}`,
 	);
 	p.log.message(
+		`${color.bold("Default Source:")} ${config.defaultSource || "(not set)"}`,
+	);
+	p.log.message(
 		`${color.bold("Default Target:")} ${config.defaultTarget || "(not set)"}`,
 	);
 	p.log.message(
 		`${color.bold("Content Reading:")} ${config.readContent ? "Enabled" : "Disabled"}`,
+	);
+	p.log.message(
+		`${color.bold("Watch Mode:")} ${config.watchEnabled ? "Enabled" : "Disabled"}`,
 	);
 
 	if (config.readContent) {
