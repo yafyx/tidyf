@@ -5,16 +5,24 @@
  */
 
 import { Command } from "commander";
+import updateNotifier from "simple-update-notifier";
+import { createRequire } from "module";
 import { configCommand } from "./commands/config.ts";
 import { organizeCommand } from "./commands/organize.ts";
 import { watchCommand } from "./commands/watch.ts";
+
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json");
+
+// Check for updates (non-blocking, cached for 1 day)
+updateNotifier({ pkg });
 
 const program = new Command();
 
 program
 	.name("tidyf")
 	.description("AI-powered file organizer using opencode.ai")
-	.version("1.0.0");
+	.version(pkg.version);
 
 // Default command - organize files
 program
