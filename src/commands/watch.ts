@@ -11,7 +11,7 @@ import {
   resolveConfig,
 } from "../lib/config.ts";
 import { analyzeFiles, cleanup } from "../lib/opencode.ts";
-import { getFileMetadata } from "../lib/scanner.ts";
+import { getFileMetadata, scanFolderStructure } from "../lib/scanner.ts";
 import { createWatcher, type FileWatcher } from "../lib/watcher.ts";
 import type {
   FileMetadata,
@@ -22,6 +22,41 @@ import type {
 } from "../types/organizer.ts";
 import { formatFileSize, moveFile } from "../utils/files.ts";
 import { getCategoryIcon, getFileIcon } from "../utils/icons.ts";
+
+// Folder cache for watch mode to avoid re-scanning on every file event
+let folderCache: string[] = [];
+let lastFolderScan = 0;
+const FOLDER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get existing folders with caching
+ */
+async function getExistingFolders(
+  targetPath: string,
+  ignore: string[] = [],
+): Promise<string[]> {
+  const now = Date.now();
+  if (now - lastFolderScan > FOLDER_CACHE_TTL) {
+    try {
+      folderCache = await scanFolderStructure(targetPath, {
+        maxDepth: 3,
+        includeEmpty: false,
+        ignore,
+      });
+      lastFolderScan = now;
+    } catch {
+      // Target directory might not exist yet - use cached or empty
+    }
+  }
+  return folderCache;
+}
+
+/**
+ * Invalidate folder cache (call after successful file moves)
+ */
+function invalidateFolderCache(): void {
+  lastFolderScan = 0;
+}
 
 /**
  * Display a proposal briefly for watch mode
@@ -55,6 +90,11 @@ async function executeProposalsSilent(
     } else {
       failed++;
     }
+  }
+
+  // Invalidate folder cache since new folders may have been created
+  if (success > 0) {
+    invalidateFolderCache();
   }
 
   return { success, failed };
@@ -207,10 +247,12 @@ export async function watchCommand(options: WatchOptions): Promise<void> {
 
     let proposal: OrganizationProposal;
     try {
+      const existingFolders = await getExistingFolders(targetPath, config.ignore);
       proposal = await analyzeFiles({
         files,
         targetDir: targetPath,
         model: parseModelString(options.model),
+        existingFolders,
       });
       s.stop("Analysis complete");
     } catch (error: any) {
@@ -276,10 +318,12 @@ export async function watchCommand(options: WatchOptions): Promise<void> {
         s.start("Analyzing queued files...");
 
         try {
+          const existingFolders = await getExistingFolders(targetPath, config.ignore);
           const proposal = await analyzeFiles({
             files: reviewQueue,
             targetDir: targetPath,
             model: parseModelString(options.model),
+            existingFolders,
           });
           s.stop("Analysis complete");
 

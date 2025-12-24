@@ -53,6 +53,7 @@ AI-powered file organizer CLI using [opencode.ai](https://opencode.ai)
 ## Features
 
 - **AI-powered organization** - Uses AI to intelligently categorize files based on name, type, and content
+- **Smart folder detection** - Respects existing folder structure for consistent organization across models
 - **Smart categories** - Documents, Images, Videos, Audio, Archives, Code, Applications, and more
 - **Watch mode** - Monitor folders and auto-organize new files
 - **Interactive CLI** - Beautiful terminal UI with confirmation prompts
@@ -225,6 +226,16 @@ Edit this file to customize AI behavior for your workflow.
    - Regenerate analysis (different model) — choose another provider/model
    - Cancel
 5. **Moves files** - Organizes files into target directory structure
+
+## Smart Folder Detection
+
+tidyf automatically detects existing folders in your target directory and instructs the AI to prefer them. This ensures:
+
+- **Consistency across models** - Different AI models will use the same folder names
+- **No duplicate folders** - Won't create "Screenshots" if "Screen Captures" already exists
+- **Respects your structure** - Extends your existing organization rather than overwriting it
+
+The tool scans up to 3 levels deep and includes up to 100 existing folders in the AI context.
 
 ## Examples
 
