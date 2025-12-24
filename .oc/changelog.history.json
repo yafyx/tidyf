@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "timestamp": "2025-12-23T18:38:51.249Z",
+      "fromRef": "v1.0.0",
+      "toRef": "HEAD",
+      "toCommitHash": "7a5d6d9fb4ef6f52c1b09668866c3933b5eec086",
+      "commitsIncluded": 3
+    },
+    {
       "timestamp": "2025-12-23T18:37:47.700Z",
       "fromRef": "f6cfb7539d1480447f1bcca54c63bf391a814e97",
       "toRef": "HEAD",
