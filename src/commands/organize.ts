@@ -19,7 +19,7 @@ import {
   resolveConfig,
 } from "../lib/config.ts";
 import { analyzeFiles, cleanup } from "../lib/opencode.ts";
-import { scanDirectory } from "../lib/scanner.ts";
+import { scanDirectory, scanFolderStructure } from "../lib/scanner.ts";
 import type {
   FileMoveProposal,
   MoveResult,
@@ -276,6 +276,21 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
     `Total size: ${formatFileSize(files.reduce((sum, f) => sum + f.size, 0))}`,
   );
 
+  // Scan existing folder structure in target directory
+  let existingFolders: string[] = [];
+  try {
+    existingFolders = await scanFolderStructure(targetPath, {
+      maxDepth: 3,
+      includeEmpty: false,
+      ignore: config.ignore,
+    });
+    if (existingFolders.length > 0) {
+      p.log.info(`Found ${color.bold(String(existingFolders.length))} existing folders in target`);
+    }
+  } catch {
+    // Target directory might not exist yet - OK
+  }
+
   // Analyze with AI
   spinner.start("Analyzing files with AI...");
 
@@ -285,6 +300,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
       files,
       targetDir: targetPath,
       model: parseModelString(options.model),
+      existingFolders,
     });
     spinner.stop("Analysis complete");
   } catch (error: any) {
@@ -383,6 +399,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
               targetDir: targetPath,
               instructions: newInstructions || undefined,
               model: parseModelString(options.model),
+              existingFolders,
             });
             spinner.stop("Analysis complete");
             displayAllProposals(proposal);
@@ -416,6 +433,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
               targetDir: targetPath,
               instructions: newInstructions || undefined,
               model: pickedModel,
+              existingFolders,
             });
             spinner.stop("Analysis complete");
             displayAllProposals(proposal);

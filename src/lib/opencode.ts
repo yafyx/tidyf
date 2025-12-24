@@ -169,6 +169,8 @@ export interface AnalyzeFilesOptions {
 	instructions?: string;
 	/** Model override */
 	model?: ModelSelection;
+	/** Existing folders in target directory for consistency */
+	existingFolders?: string[];
 }
 
 /**
@@ -311,7 +313,7 @@ export async function checkConflicts(
 export async function analyzeFiles(
 	options: AnalyzeFilesOptions,
 ): Promise<OrganizationProposal> {
-	const { files, targetDir, instructions, model } = options;
+	const { files, targetDir, instructions, model, existingFolders } = options;
 
 	if (files.length === 0) {
 		return {
@@ -332,11 +334,21 @@ export async function analyzeFiles(
 	// Build the prompt
 	const filesJson = formatFilesForPrompt(files);
 
+	// Build existing folders section if available
+	const existingFoldersSection = existingFolders?.length
+		? `
+EXISTING FOLDERS in target directory:
+${existingFolders.join("\n")}
+
+IMPORTANT: Prefer using these existing folders when appropriate. Only create new folders when no suitable existing folder matches the file's category.
+`
+		: "";
+
 	const userPrompt = `
 Analyze the following files and organize them according to the rules.
 
 Target directory: ${targetDir}
-
+${existingFoldersSection}
 ${instructions ? `Additional instructions: ${instructions}\n` : ""}
 Files to organize:
 ${filesJson}

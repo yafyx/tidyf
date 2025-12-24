@@ -3,11 +3,113 @@
  */
 
 import { readdir, stat, readFile } from "fs/promises";
-import { join, extname, basename } from "path";
+import { join, extname, basename, relative } from "path";
 import { lookup as lookupMimeType } from "mime-types";
 import type { FileMetadata } from "../types/organizer.ts";
 import { shouldIgnore } from "./config.ts";
 import { isDirectory, isFile } from "../utils/files.ts";
+
+/**
+ * Options for scanning folder structure
+ */
+export interface ScanFolderOptions {
+  /** Maximum depth to scan (default: 3) */
+  maxDepth?: number;
+  /** Include empty folders (default: false) */
+  includeEmpty?: boolean;
+  /** Patterns to ignore */
+  ignore?: string[];
+  /** Maximum number of folders to return (default: 100) */
+  maxFolders?: number;
+}
+
+/**
+ * Scan a directory and return existing folder structure as relative paths
+ * Used to inform AI about existing organization
+ */
+export async function scanFolderStructure(
+  dirPath: string,
+  options: ScanFolderOptions = {}
+): Promise<string[]> {
+  const {
+    maxDepth = 3,
+    includeEmpty = false,
+    ignore = [],
+    maxFolders = 100,
+  } = options;
+
+  const folders: string[] = [];
+
+  await scanFoldersInternal(dirPath, dirPath, 0, maxDepth, includeEmpty, ignore, folders, maxFolders);
+
+  // Sort by depth (shallower first) then alphabetically
+  folders.sort((a, b) => {
+    const depthA = a.split("/").length;
+    const depthB = b.split("/").length;
+    if (depthA !== depthB) return depthA - depthB;
+    return a.localeCompare(b);
+  });
+
+  return folders.slice(0, maxFolders);
+}
+
+async function scanFoldersInternal(
+  basePath: string,
+  currentPath: string,
+  currentDepth: number,
+  maxDepth: number,
+  includeEmpty: boolean,
+  ignore: string[],
+  folders: string[],
+  maxFolders: number
+): Promise<void> {
+  if (currentDepth >= maxDepth || folders.length >= maxFolders) {
+    return;
+  }
+
+  try {
+    const entries = await readdir(currentPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (folders.length >= maxFolders) break;
+
+      if (!entry.isDirectory()) continue;
+
+      // Skip hidden folders and ignored patterns
+      if (entry.name.startsWith(".")) continue;
+      if (shouldIgnore(entry.name, ignore)) continue;
+
+      const fullPath = join(currentPath, entry.name);
+      const relativePath = relative(basePath, fullPath);
+
+      // Check if folder has contents (if we care about empty folders)
+      if (!includeEmpty) {
+        try {
+          const contents = await readdir(fullPath);
+          if (contents.length === 0) continue;
+        } catch {
+          continue;
+        }
+      }
+
+      folders.push(relativePath);
+
+      // Recursively scan subdirectories
+      await scanFoldersInternal(
+        basePath,
+        fullPath,
+        currentDepth + 1,
+        maxDepth,
+        includeEmpty,
+        ignore,
+        folders,
+        maxFolders
+      );
+    }
+  } catch {
+    // Silently skip directories we can't read
+  }
+}
 
 /**
  * Options for scanning a directory
