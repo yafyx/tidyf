@@ -31,7 +31,19 @@ import type {
  * Main config command
  */
 export async function configCommand(options: ConfigOptions): Promise<void> {
-	p.intro(color.bgCyan(color.black(" tidyf config ")));
+	try {
+		p.intro(color.bgCyan(color.black(" tidyf config ")));
+	} catch (error: any) {
+		console.log(color.cyan(" tidyf config "));
+		console.log();
+		console.log("Unable to display interactive interface.");
+		console.log("Your terminal may not support interactive prompts.");
+		console.log();
+		console.log(`Edit your config directly at: ${getGlobalConfigPath()}`);
+		console.log(`Edit your rules at: ${getGlobalRulesPath()}`);
+		console.log();
+		process.exit(0);
+	}
 
 	// Initialize global config if needed
 	initGlobalConfig();

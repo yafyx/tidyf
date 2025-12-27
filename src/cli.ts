@@ -9,6 +9,7 @@ import updateNotifier from "simple-update-notifier";
 import { createRequire } from "module";
 import { configCommand } from "./commands/config.ts";
 import { organizeCommand } from "./commands/organize.ts";
+import { undoCommand } from "./commands/undo.ts";
 import { watchCommand } from "./commands/watch.ts";
 
 const require = createRequire(import.meta.url);
@@ -23,20 +24,6 @@ program
 	.name("tidyf")
 	.description("AI-powered file organizer using opencode.ai")
 	.version(pkg.version);
-
-// Default command - organize files
-program
-	.argument("[path]", "Directory to organize (default: ~/Downloads)")
-	.option("-d, --dry-run", "Preview changes without moving files")
-	.option("-y, --yes", "Skip confirmation prompts and apply all")
-	.option("-r, --recursive", "Scan subdirectories")
-	.option("--depth <n>", "Max subdirectory depth to scan", "1")
-	.option("-s, --source <path>", "Source directory to organize")
-	.option("-t, --target <path>", "Target directory for organized files")
-	.option("-m, --model <id>", "Override model (provider/model)")
-	.action(async (path, options) => {
-		await organizeCommand({ path: path || options.source, ...options });
-	});
 
 // Watch command - monitor folders for new files
 program
@@ -60,6 +47,29 @@ program
 	.option("-l, --local", "Configure local settings (current directory)")
 	.action(async (options) => {
 		await configCommand(options);
+	});
+
+// Undo command - revert file organization
+program
+	.command("undo")
+	.alias("u")
+	.description("Undo the last file organization operation")
+	.action(async () => {
+		await undoCommand();
+	});
+
+// Default command - organize files (must be defined last to not intercept subcommands)
+program
+	.argument("[path]", "Directory to organize (default: ~/Downloads)")
+	.option("-d, --dry-run", "Preview changes without moving files")
+	.option("-y, --yes", "Skip confirmation prompts and apply all")
+	.option("-r, --recursive", "Scan subdirectories")
+	.option("--depth <n>", "Max subdirectory depth to scan", "1")
+	.option("-s, --source <path>", "Source directory to organize")
+	.option("-t, --target <path>", "Target directory for organized files")
+	.option("-m, --model <id>", "Override model (provider/model)")
+	.action(async (path, options) => {
+		await organizeCommand({ path: path || options.source, ...options });
 	});
 
 // Handle errors gracefully

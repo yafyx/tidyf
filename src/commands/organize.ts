@@ -10,6 +10,7 @@
  */
 
 import * as p from "@clack/prompts";
+import { existsSync } from "fs";
 import { isAbsolute, resolve } from "path";
 import color from "picocolors";
 import {
@@ -19,14 +20,20 @@ import {
   resolveConfig,
 } from "../lib/config.ts";
 import { analyzeFiles, cleanup } from "../lib/opencode.ts";
+import {
+  addMoveToHistory,
+  createHistoryEntry,
+  saveHistoryEntry,
+} from "../lib/history.ts";
 import { scanDirectory, scanFolderStructure } from "../lib/scanner.ts";
 import type {
+  FileMetadata,
   FileMoveProposal,
   MoveResult,
   OrganizationProposal,
   OrganizeOptions,
 } from "../types/organizer.ts";
-import { formatFileSize, moveFile } from "../utils/files.ts";
+import { formatFileSize, generateUniqueName, getFileStats, moveFile } from "../utils/files.ts";
 import {
   getCategoryIcon,
   getFileIcon,
@@ -61,9 +68,62 @@ function displayProposal(proposal: FileMoveProposal, index: number): void {
 }
 
 /**
+ * Display file tree for proposals
+ */
+function displayFileTree(proposals: FileMoveProposal[]): void {
+  const tree = new Map<string, FileMoveProposal[]>();
+
+  for (const prop of proposals) {
+    const parts = prop.destination.split(/[/\\]/);
+    let currentPath = "";
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+      if (i === parts.length - 1) {
+        if (!tree.has(currentPath)) {
+          tree.set(currentPath, []);
+        }
+        tree.get(currentPath)!.push(prop);
+      }
+    }
+  }
+
+  const sortedPaths = Array.from(tree.keys()).sort();
+  const indent = "  ";
+
+  p.log.info(color.bold("Folder structure:"));
+  console.log();
+
+  for (const path of sortedPaths) {
+    const props = tree.get(path)!;
+    const depth = path.split(/[/\\]/).length - 1;
+
+    if (depth === 1) {
+      console.log(`${color.cyan("├─")} ${color.bold(path)}`);
+    } else {
+      const parentPath = path.split(/[/\\]/).slice(0, -1).join("/");
+      const parentProps = tree.get(parentPath);
+      if (!parentProps) {
+        console.log(`${"│ ".repeat(depth - 1)}├─ ${color.bold(path)}`);
+      }
+    }
+
+    for (const prop of props) {
+      const icon = getFileIcon(prop.file.name);
+      const size = color.dim(`(${formatFileSize(prop.file.size)})`);
+      console.log(`  ${"│ ".repeat(depth)}  ${icon} ${prop.file.name} ${size}`);
+    }
+  }
+
+  console.log();
+}
+
+/**
  * Display all proposals grouped by category
  */
-function displayAllProposals(proposal: OrganizationProposal): void {
+function displayAllProposals(proposal: OrganizationProposal, useTreeView: boolean = false): void {
   p.log.info(
     color.bold(
       `\nProposed organization for ${proposal.proposals.length} files:\n`,
@@ -72,6 +132,11 @@ function displayAllProposals(proposal: OrganizationProposal): void {
 
   if (proposal.strategy) {
     p.log.message(color.dim(`Strategy: ${proposal.strategy}\n`));
+  }
+
+  // Show tree view for large file sets
+  if (useTreeView) {
+    displayFileTree(proposal.proposals);
   }
 
   // Group by category
@@ -84,15 +149,17 @@ function displayAllProposals(proposal: OrganizationProposal): void {
     byCategory.get(cat)!.push(prop);
   }
 
-  let index = 0;
-  for (const [category, props] of byCategory) {
-    p.log.info(
-      `${getCategoryIcon(category)} ${color.bold(category)} (${props.length} files)`,
-    );
-    for (const prop of props) {
-      displayProposal(prop, index++);
+  if (!useTreeView) {
+    let index = 0;
+    for (const [category, props] of byCategory) {
+      p.log.info(
+        `${getCategoryIcon(category)} ${color.bold(category)} (${props.length} files)`,
+      );
+      for (const prop of props) {
+        displayProposal(prop, index++);
+      }
+      console.log();
     }
-    console.log();
   }
 
   // Show uncategorized files if any
@@ -119,12 +186,75 @@ function displayAllProposals(proposal: OrganizationProposal): void {
 }
 
 /**
+ * Display conflict details for a proposal
+ */
+async function displayConflictDetails(proposal: FileMoveProposal): Promise<void> {
+  const sourceStats = await getFileStats(proposal.sourcePath);
+  const destStats = await getFileStats(proposal.destination);
+
+  console.log();
+  p.log.info(color.bold(`Conflict: ${proposal.file.name}`));
+  console.log();
+
+  p.log.message(color.bold("Source file (to be moved):"));
+  p.log.message(`  Path: ${proposal.sourcePath}`);
+  p.log.message(`  Size: ${sourceStats ? color.green(formatFileSize(sourceStats.size)) : color.red("Unknown")}`);
+  p.log.message(`  Modified: ${sourceStats ? color.cyan(sourceStats.mtime.toLocaleString()) : color.red("Unknown")}`);
+
+  console.log();
+  p.log.message(color.bold("Destination file (existing):"));
+  p.log.message(`  Path: ${proposal.destination}`);
+  p.log.message(`  Size: ${destStats ? color.yellow(formatFileSize(destStats.size)) : color.red("Unknown")}`);
+  p.log.message(`  Modified: ${destStats ? color.cyan(destStats.mtime.toLocaleString()) : color.red("Unknown")}`);
+
+  console.log();
+  if (sourceStats && destStats) {
+    const sizeDiff = sourceStats.size - destStats.size;
+    const timeDiff = sourceStats.mtime.getTime() - destStats.mtime.getTime();
+
+    p.log.info(color.bold("Comparison:"));
+    p.log.message(`  Size difference: ${sizeDiff > 0 ? color.green("+" + formatFileSize(Math.abs(sizeDiff))) : sizeDiff < 0 ? color.red("-" + formatFileSize(Math.abs(sizeDiff))) : color.dim("Same size")}`);
+    p.log.message(`  Age difference: ${timeDiff > 0 ? color.green("Source is newer") : timeDiff < 0 ? color.yellow("Destination is newer") : color.dim("Same age")}`);
+  }
+
+  console.log();
+}
+
+/**
+ * Select specific files to move using multiselect
+ */
+async function selectFilesToMove(
+  proposals: FileMoveProposal[],
+): Promise<number[]> {
+  const options = proposals.map((p, i) => ({
+    value: i,
+    label: p.file.name,
+    hint: `${p.category.name}${p.category.subcategory ? "/" + p.category.subcategory : ""} ${formatFileSize(p.file.size)}`,
+  }));
+
+  const selected = await p.multiselect({
+    message: "Select files to move (press Space to select/deselect, Enter to confirm):",
+    options,
+    required: false,
+  });
+
+  if (p.isCancel(selected)) {
+    return [];
+  }
+
+  return selected as number[];
+}
+
+/**
  * Execute all proposals
  */
 async function executeProposals(
   proposals: FileMoveProposal[],
+  sourcePath: string,
+  targetPath: string,
 ): Promise<MoveResult[]> {
   const results: MoveResult[] = [];
+  const historyEntry = createHistoryEntry(sourcePath, targetPath);
   const s = p.spinner();
 
   for (let i = 0; i < proposals.length; i++) {
@@ -139,6 +269,7 @@ async function executeProposals(
     results.push(result);
 
     if (result.status === "completed") {
+      addMoveToHistory(historyEntry, prop.sourcePath, prop.destination);
       s.stop(
         `${color.green("✓")} ${i + 1}/${proposals.length}: ${prop.file.name}`,
       );
@@ -153,8 +284,13 @@ async function executeProposals(
     }
   }
 
-  // Summary
+  // Save history if any moves were successful
   const completed = results.filter((r) => r.status === "completed").length;
+  if (completed > 0) {
+    saveHistoryEntry(historyEntry);
+  }
+
+  // Summary
   const failed = results.filter((r) => r.status === "failed").length;
   const skipped = results.filter((r) => r.status === "skipped").length;
 
@@ -252,6 +388,74 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   p.log.info(`Source: ${color.cyan(sourcePath)}`);
   p.log.info(`Target: ${color.cyan(targetPath)}`);
 
+  // Check if source directory exists
+  if (!existsSync(sourcePath)) {
+    console.log();
+    p.log.error(color.red("Directory does not exist"));
+
+    console.log();
+    p.log.message(`${color.cyan("Missing directory:")} ${sourcePath}`);
+
+    console.log();
+
+    const action = await p.select({
+      message: "What would you like to do?",
+      options: [
+        {
+          value: "create",
+          label: "Create this directory",
+        },
+        {
+          value: "change_path",
+          label: "Choose a different directory",
+        },
+        {
+          value: "exit",
+          label: "Exit",
+        },
+      ],
+    });
+
+    if (p.isCancel(action) || action === "exit") {
+      p.outro("Canceled");
+      cleanup();
+      process.exit(0);
+    }
+
+    if (action === "create") {
+      const { mkdir } = await import("fs/promises");
+      try {
+        await mkdir(sourcePath, { recursive: true });
+        p.log.success(`Created directory: ${color.cyan(sourcePath)}`);
+      } catch (error: any) {
+        p.log.error(`Failed to create directory: ${error.message}`);
+        p.outro("Canceled");
+        cleanup();
+        process.exit(0);
+      }
+    }
+
+    if (action === "change_path") {
+      console.log();
+      const newPath = await p.text({
+        message: "Enter directory path to scan:",
+        placeholder: "~/Downloads",
+      });
+
+      if (!p.isCancel(newPath) && newPath.trim()) {
+        await organizeCommand({
+          ...options,
+          path: newPath.trim(),
+        });
+        return;
+      } else {
+        p.outro("Canceled");
+        cleanup();
+        process.exit(0);
+      }
+    }
+  }
+
   // Scan directory
   const spinner = p.spinner();
   spinner.start("Scanning directory...");
@@ -267,8 +471,101 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   spinner.stop(`Found ${color.bold(String(files.length))} files`);
 
   if (files.length === 0) {
-    p.outro(color.yellow("No files to organize"));
-    return;
+    console.log();
+    p.log.warn(color.yellow("No files to organize"));
+
+    console.log();
+    p.log.message(`${color.cyan("Scanned directory:")} ${sourcePath}`);
+
+    console.log();
+    p.log.info("Possible reasons:");
+    p.log.message(`  • The directory is empty`);
+    p.log.message(`  • All files are ignored by your ignore patterns`);
+    p.log.message(`  • You're not scanning recursively and files are in subdirectories`);
+
+    if (config.ignore && config.ignore.length > 0) {
+      console.log();
+      p.log.info(`Active ignore patterns: ${color.dim(config.ignore.join(", "))}`);
+    }
+
+    console.log();
+
+    const action = await p.select({
+      message: "What would you like to do?",
+      options: [
+        {
+          value: "scan_recursive",
+          label: "Scan recursively",
+          hint: !options.recursive ? "Include subdirectories" : "Already scanning recursively",
+        },
+        {
+          value: "change_path",
+          label: "Choose a different directory",
+        },
+        {
+          value: "edit_config",
+          label: "Edit configuration",
+          hint: "Modify ignore patterns and settings",
+        },
+        {
+          value: "exit",
+          label: "Exit",
+        },
+      ],
+    });
+
+    if (p.isCancel(action) || action === "exit") {
+      p.outro("Nothing to do");
+      cleanup();
+      process.exit(0);
+    }
+
+    if (action === "scan_recursive") {
+      console.log();
+      const newPath = await p.text({
+        message: "Enter directory path (or press Enter to use current):",
+        placeholder: sourcePath,
+        defaultValue: sourcePath,
+      });
+
+      if (!p.isCancel(newPath) && newPath.trim()) {
+        await organizeCommand({
+          ...options,
+          path: newPath.trim(),
+          recursive: true,
+        });
+        return;
+      }
+    }
+
+    if (action === "change_path") {
+      console.log();
+      const newPath = await p.text({
+        message: "Enter directory path to scan:",
+        placeholder: "~/Downloads",
+      });
+
+      if (!p.isCancel(newPath) && newPath.trim()) {
+        await organizeCommand({
+          ...options,
+          path: newPath.trim(),
+        });
+        return;
+      }
+    }
+
+    if (action === "edit_config") {
+      console.log();
+      p.log.message(`Run ${color.cyan("tidyf config")} to open the configuration editor`);
+      console.log();
+      p.outro("Exiting...");
+      cleanup();
+      process.exit(0);
+    }
+
+    p.outro("Nothing to do");
+    cleanup();
+    process.exit(0);
   }
 
   // Show file summary
@@ -296,13 +593,52 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
 
   let proposal: OrganizationProposal;
   try {
-    proposal = await analyzeFiles({
-      files,
-      targetDir: targetPath,
-      model: parseModelString(options.model),
-      existingFolders,
-    });
-    spinner.stop("Analysis complete");
+    const BATCH_SIZE = 50;
+
+    if (files.length > BATCH_SIZE) {
+      p.log.info(`Processing ${files.length} files in batches of ${BATCH_SIZE}...`);
+
+      let allProposals: FileMoveProposal[] = [];
+      let allUncategorized: FileMetadata[] = [];
+      let strategies: string[] = [];
+
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(files.length / BATCH_SIZE);
+
+        spinner.start(`Analyzing batch ${batchNum}/${totalBatches} (${batch.length} files)...`);
+
+        const batchProposal = await analyzeFiles({
+          files: batch,
+          targetDir: targetPath,
+          model: parseModelString(options.model),
+          existingFolders,
+        });
+
+        allProposals = allProposals.concat(batchProposal.proposals);
+        allUncategorized = allUncategorized.concat(batchProposal.uncategorized);
+        if (batchProposal.strategy) {
+          strategies.push(batchProposal.strategy);
+        }
+      }
+
+      spinner.stop("Analysis complete");
+      proposal = {
+        proposals: allProposals,
+        strategy: strategies.join("; "),
+        uncategorized: allUncategorized,
+        analyzedAt: new Date(),
+      };
+    } else {
+      proposal = await analyzeFiles({
+        files,
+        targetDir: targetPath,
+        model: parseModelString(options.model),
+        existingFolders,
+      });
+      spinner.stop("Analysis complete");
+    }
   } catch (error: any) {
     spinner.stop("Analysis failed");
     p.cancel(error.message);
@@ -311,7 +647,12 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   }
 
   // Display proposals
-  displayAllProposals(proposal);
+  const useTreeView = proposal.proposals.length >= 20;
+  displayAllProposals(proposal, useTreeView);
+
+  // Check for conflicts
+  const conflicts = proposal.proposals.filter((p) => p.conflictExists);
+  const hasConflicts = conflicts.length > 0;
 
   // Dry run mode
   if (options.dryRun) {
@@ -332,7 +673,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   while (!done) {
     if (options.yes) {
       // Auto-apply all
-      await executeProposals(proposal.proposals);
+      await executeProposals(proposal.proposals, sourcePath, targetPath);
       done = true;
     } else {
       const action = await p.select({
@@ -342,6 +683,20 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
             value: "apply_all",
             label: `Apply all ${proposal.proposals.length} moves`,
             hint: "Organize files as proposed",
+          },
+          ...(hasConflicts
+            ? [
+                {
+                  value: "resolve_conflicts" as const,
+                  label: `Resolve ${conflicts.length} conflicts`,
+                  hint: "Review and handle conflicting files",
+                },
+              ]
+            : []),
+          {
+            value: "select_individual",
+            label: "Select specific files to move",
+            hint: "Choose which files to organize",
           },
           {
             value: "view_details",
@@ -373,9 +728,59 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
 
       switch (action) {
         case "apply_all":
-          await executeProposals(proposal.proposals);
+          await executeProposals(proposal.proposals, sourcePath, targetPath);
           done = true;
           break;
+
+        case "resolve_conflicts": {
+          const conflictIndex = await p.select({
+            message: "Which conflict to view?",
+            options: conflicts.map((p, i) => ({
+              value: i,
+              label: p.file.name,
+              hint: formatFileSize(p.file.size),
+            })),
+          });
+
+          if (p.isCancel(conflictIndex)) {
+            break;
+          }
+
+          await displayConflictDetails(conflicts[conflictIndex as number]);
+
+          const resolution = await p.select({
+            message: "How to resolve this conflict?",
+            options: [
+              { value: "rename", label: "Rename (auto-generate new name)", hint: "Keep both files" },
+              { value: "overwrite", label: "Overwrite", hint: "Replace destination file" },
+              { value: "skip", label: "Skip", hint: "Don't move this file" },
+              { value: "cancel", label: "Cancel", hint: "Return to main menu" },
+            ],
+          });
+
+          if (p.isCancel(resolution) || resolution === "cancel") {
+            break;
+          }
+
+          const conflictProposal = conflicts[conflictIndex as number];
+          if (resolution === "overwrite") {
+            await executeProposals([{ ...conflictProposal, conflictExists: false }], sourcePath, targetPath);
+          } else if (resolution === "rename") {
+            const uniqueDest = await generateUniqueName(conflictProposal.destination);
+            await executeProposals([{ ...conflictProposal, destination: uniqueDest, conflictExists: false }], sourcePath, targetPath);
+          }
+          break;
+        }
+
+        case "select_individual": {
+          const selectedIndices = await selectFilesToMove(proposal.proposals);
+          if (selectedIndices.length > 0) {
+            const selectedProposals = selectedIndices.map((i: number) => proposal.proposals[i]);
+            await executeProposals(selectedProposals, sourcePath, targetPath);
+            done = true;
+          }
+          break;
+        }
 
         case "view_details":
           await viewProposalDetails(proposal.proposals);
