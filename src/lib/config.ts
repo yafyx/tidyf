@@ -8,6 +8,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
 import type { TidyConfig, ModelSelection } from "../types/config.ts";
+import {
+	profileExists,
+	readProfile,
+	readProfileRules,
+	getProfileConfigFields,
+} from "./profiles.ts";
 
 const CONFIG_DIR = ".tidy";
 const SETTINGS_FILE = "settings.json";
@@ -346,4 +352,67 @@ export function getDefaultConfig(): TidyConfig {
  */
 export function getDefaultRules(): string {
   return DEFAULT_RULES;
+}
+
+/**
+ * Resolve the effective configuration with profile support
+ * Resolution order: defaults → global → profile → local
+ */
+export function resolveConfigWithProfile(
+	profileName?: string,
+	basePath: string = process.cwd(),
+): TidyConfig {
+	// Start with defaults
+	const config: TidyConfig = { ...DEFAULT_CONFIG };
+
+	// Merge global config
+	const globalConfig = readConfig(getGlobalConfigPath());
+	Object.assign(config, globalConfig);
+
+	// Merge profile config (if specified and exists)
+	if (profileName && profileExists(profileName)) {
+		const profile = readProfile(profileName);
+		if (profile) {
+			const profileConfig = getProfileConfigFields(profile);
+			Object.assign(config, profileConfig);
+		}
+	}
+
+	// Merge local config (takes precedence)
+	const localConfig = readConfig(getLocalConfigPath(basePath));
+	Object.assign(config, localConfig);
+
+	return config;
+}
+
+/**
+ * Get the rules prompt with profile support
+ * Resolution order: local → profile → global → default
+ */
+export function getRulesPromptWithProfile(
+	profileName?: string,
+	basePath: string = process.cwd(),
+): string {
+	// Try local rules first (always highest priority)
+	const localRules = readRules(getLocalRulesPath(basePath));
+	if (localRules) {
+		return localRules;
+	}
+
+	// Try profile rules (if specified and exists)
+	if (profileName && profileExists(profileName)) {
+		const profileRules = readProfileRules(profileName);
+		if (profileRules) {
+			return profileRules;
+		}
+	}
+
+	// Fall back to global rules
+	const globalRules = readRules(getGlobalRulesPath());
+	if (globalRules) {
+		return globalRules;
+	}
+
+	// Return default rules
+	return DEFAULT_RULES;
 }

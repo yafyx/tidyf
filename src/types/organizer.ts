@@ -88,6 +88,8 @@ export interface OrganizeOptions {
   target?: string;
   /** Model override */
   model?: string;
+  /** Profile name to use */
+  profile?: string;
 }
 
 /**
@@ -104,6 +106,8 @@ export interface WatchOptions {
   queue?: boolean;
   /** Model override */
   model?: string;
+  /** Profile name to use */
+  profile?: string;
 }
 
 /**

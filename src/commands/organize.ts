@@ -18,8 +18,11 @@ import {
   initGlobalConfig,
   parseModelString,
   resolveConfig,
+  resolveConfigWithProfile,
+  getRulesPromptWithProfile,
 } from "../lib/config.ts";
 import { analyzeFiles, cleanup } from "../lib/opencode.ts";
+import { listProfiles, profileExists } from "../lib/profiles.ts";
 import {
   addMoveToHistory,
   createHistoryEntry,
@@ -366,8 +369,37 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   // Initialize global config if needed
   initGlobalConfig();
 
-  // Resolve configuration
-  const config = resolveConfig();
+  // Validate and resolve profile if specified
+  if (options.profile) {
+    if (!profileExists(options.profile)) {
+      p.log.error(`Profile "${options.profile}" not found`);
+      const profiles = listProfiles();
+      if (profiles.length > 0) {
+        p.log.info("Available profiles:");
+        profiles.forEach((pr) => p.log.message(`  - ${pr.name}`));
+      }
+      const create = await p.confirm({
+        message: `Create profile "${options.profile}"?`,
+        initialValue: false,
+      });
+      if (p.isCancel(create) || !create) {
+        p.outro("Canceled");
+        cleanup();
+        process.exit(0);
+      }
+      // Redirect to profile creation
+      const { profileCommand } = await import("./profile.ts");
+      await profileCommand({ action: "create", name: options.profile });
+      // Re-run organize with the now-existing profile
+      p.log.info("Profile created. Continuing with organization...");
+    }
+    p.log.info(`Profile: ${color.cyan(options.profile)}`);
+  }
+
+  // Resolve configuration (with profile if specified)
+  const config = options.profile
+    ? resolveConfigWithProfile(options.profile)
+    : resolveConfig();
 
   // Determine source directory
   const sourcePath = resolvePath(
@@ -614,6 +646,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
           targetDir: targetPath,
           model: parseModelString(options.model),
           existingFolders,
+          profileName: options.profile,
         });
 
         allProposals = allProposals.concat(batchProposal.proposals);
@@ -636,6 +669,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
         targetDir: targetPath,
         model: parseModelString(options.model),
         existingFolders,
+        profileName: options.profile,
       });
       spinner.stop("Analysis complete");
     }
@@ -805,6 +839,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
               instructions: newInstructions || undefined,
               model: parseModelString(options.model),
               existingFolders,
+              profileName: options.profile,
             });
             spinner.stop("Analysis complete");
             displayAllProposals(proposal);
@@ -839,6 +874,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
               instructions: newInstructions || undefined,
               model: pickedModel,
               existingFolders,
+              profileName: options.profile,
             });
             spinner.stop("Analysis complete");
             displayAllProposals(proposal);

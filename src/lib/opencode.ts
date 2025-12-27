@@ -20,7 +20,11 @@ import type {
 	OrganizationProposal,
 } from "../types/organizer.ts";
 import { fileExists } from "../utils/files.ts";
-import { expandPath, getRulesPrompt, resolveConfig } from "./config.ts";
+import {
+	expandPath,
+	getRulesPromptWithProfile,
+	resolveConfigWithProfile,
+} from "./config.ts";
 
 const execAsync = promisify(exec);
 
@@ -171,6 +175,8 @@ export interface AnalyzeFilesOptions {
 	model?: ModelSelection;
 	/** Existing folders in target directory for consistency */
 	existingFolders?: string[];
+	/** Profile name to use for config and rules */
+	profileName?: string;
 }
 
 /**
@@ -313,7 +319,7 @@ export async function checkConflicts(
 export async function analyzeFiles(
 	options: AnalyzeFilesOptions,
 ): Promise<OrganizationProposal> {
-	const { files, targetDir, instructions, model, existingFolders } = options;
+	const { files, targetDir, instructions, model, existingFolders, profileName } = options;
 
 	if (files.length === 0) {
 		return {
@@ -327,9 +333,9 @@ export async function analyzeFiles(
 	const opencodeClient = await getClient();
 	const sid = await getSessionId();
 
-	// Get configuration
-	const config = resolveConfig();
-	const rulesPrompt = getRulesPrompt();
+	// Get configuration with profile awareness
+	const config = resolveConfigWithProfile(profileName);
+	const rulesPrompt = getRulesPromptWithProfile(profileName);
 
 	// Build the prompt
 	const filesJson = formatFilesForPrompt(files);

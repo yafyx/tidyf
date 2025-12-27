@@ -9,8 +9,10 @@ import {
   initGlobalConfig,
   parseModelString,
   resolveConfig,
+  resolveConfigWithProfile,
 } from "../lib/config.ts";
 import { analyzeFiles, cleanup } from "../lib/opencode.ts";
+import { listProfiles, profileExists } from "../lib/profiles.ts";
 import { getFileMetadata, scanFolderStructure } from "../lib/scanner.ts";
 import { createWatcher, type FileWatcher } from "../lib/watcher.ts";
 import type {
@@ -152,8 +154,26 @@ export async function watchCommand(options: WatchOptions): Promise<void> {
   // Initialize global config if needed
   initGlobalConfig();
 
-  // Resolve configuration
-  const config = resolveConfig();
+  // Validate and resolve profile if specified
+  if (options.profile) {
+    if (!profileExists(options.profile)) {
+      p.log.error(`Profile "${options.profile}" not found`);
+      const profiles = listProfiles();
+      if (profiles.length > 0) {
+        p.log.info("Available profiles:");
+        profiles.forEach((pr) => p.log.message(`  - ${pr.name}`));
+      }
+      p.outro("Canceled");
+      cleanup();
+      process.exit(1);
+    }
+    p.log.info(`Profile: ${color.cyan(options.profile)}`);
+  }
+
+  // Resolve configuration (with profile if specified)
+  const config = options.profile
+    ? resolveConfigWithProfile(options.profile)
+    : resolveConfig();
 
   // Determine paths to watch
   let watchPaths: string[];
@@ -253,6 +273,7 @@ export async function watchCommand(options: WatchOptions): Promise<void> {
         targetDir: targetPath,
         model: parseModelString(options.model),
         existingFolders,
+        profileName: options.profile,
       });
       s.stop("Analysis complete");
     } catch (error: any) {
@@ -324,6 +345,7 @@ export async function watchCommand(options: WatchOptions): Promise<void> {
             targetDir: targetPath,
             model: parseModelString(options.model),
             existingFolders,
+            profileName: options.profile,
           });
           s.stop("Analysis complete");
 

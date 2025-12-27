@@ -21,11 +21,18 @@ import {
 	writeRules,
 } from "../lib/config.ts";
 import { cleanup, getAvailableModels } from "../lib/opencode.ts";
+import {
+	listProfiles,
+	profileExists,
+	validateProfileName,
+	writeProfile,
+} from "../lib/profiles.ts";
 import type {
 	ConfigOptions,
 	ModelSelection,
 	TidyConfig,
 } from "../types/config.ts";
+import type { Profile } from "../types/profile.ts";
 
 /**
  * Main config command
@@ -108,6 +115,11 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 					label: "View Current Configuration",
 				},
 				{
+					value: "save_as_profile",
+					label: "Save as Profile",
+					hint: "Create a new profile from current settings",
+				},
+				{
 					value: "reset",
 					label: "Reset to Defaults",
 					hint: color.red("Destructive"),
@@ -148,6 +160,9 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 				break;
 			case "view":
 				viewConfig(effectiveConfig, scope);
+				break;
+			case "save_as_profile":
+				await saveAsProfile(effectiveConfig);
 				break;
 			case "reset":
 				await resetConfig(configPath, rulesPath, scope);
@@ -639,4 +654,46 @@ async function resetConfig(
 	writeRules(rulesPath, getDefaultRules());
 
 	p.log.success("Configuration reset to defaults");
+}
+
+/**
+ * Save current configuration as a new profile
+ */
+async function saveAsProfile(config: TidyConfig): Promise<void> {
+	// Get profile name
+	const name = await p.text({
+		message: "Profile name:",
+		placeholder: "work",
+		validate: (value) => {
+			const validation = validateProfileName(value);
+			if (!validation.valid) return validation.error;
+			if (profileExists(value)) return `Profile "${value}" already exists`;
+		},
+	});
+
+	if (p.isCancel(name)) return;
+
+	// Get description
+	const description = await p.text({
+		message: "Description (optional):",
+		placeholder: "e.g., Work documents and projects",
+	});
+
+	// Create profile from current config
+	const profile: Profile = {
+		name,
+		description: p.isCancel(description) ? undefined : description || undefined,
+		...config,
+	};
+
+	writeProfile(name, profile);
+
+	p.log.success(`Profile "${name}" created!`);
+	p.log.message(color.dim(`Use with: tidyf -p ${name}`));
+
+	// Show existing profiles
+	const profiles = listProfiles();
+	if (profiles.length > 1) {
+		p.log.info(`You now have ${profiles.length} profiles: ${profiles.map((pr) => pr.name).join(", ")}`);
+	}
 }
