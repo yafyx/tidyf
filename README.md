@@ -1,3 +1,8 @@
+<div align="center">
+  <img src="logo.svg#gh-light-mode-only" width="120" alt="tidyf logo" />
+  <img src="logo-white.svg#gh-dark-mode-only" width="120" alt="tidyf logo" />
+</div>
+
 # tidyf
 
 [![npm version](https://img.shields.io/npm/v/tidyf.svg)](https://www.npmjs.com/package/tidyf)
