@@ -35,8 +35,9 @@ import type {
   MoveResult,
   OrganizationProposal,
   OrganizeOptions,
+  DuplicateGroup,
 } from "../types/organizer.ts";
-import { formatFileSize, generateUniqueName, getFileStats, moveFile } from "../utils/files.ts";
+import { formatFileSize, generateUniqueName, getFileStats, moveFile, computeFileHash } from "../utils/files.ts";
 import {
   getCategoryIcon,
   getFileIcon,
@@ -307,6 +308,38 @@ async function executeProposals(
 }
 
 /**
+ * Execute all proposals quietly (for JSON mode)
+ */
+async function executeProposalsQuiet(
+  proposals: FileMoveProposal[],
+  sourcePath: string,
+  targetPath: string,
+): Promise<MoveResult[]> {
+  const results: MoveResult[] = [];
+  const historyEntry = createHistoryEntry(sourcePath, targetPath);
+
+  for (const prop of proposals) {
+    const result = await moveFile(prop.sourcePath, prop.destination, {
+      overwrite: false,
+      backup: false,
+    });
+
+    results.push(result);
+
+    if (result.status === "completed") {
+      addMoveToHistory(historyEntry, prop.sourcePath, prop.destination);
+    }
+  }
+
+  const completed = results.filter((r) => r.status === "completed").length;
+  if (completed > 0) {
+    saveHistoryEntry(historyEntry);
+  }
+
+  return results;
+}
+
+/**
  * View details of a specific proposal
  */
 async function viewProposalDetails(
@@ -361,10 +394,101 @@ function resolvePath(inputPath: string): string {
 }
 
 /**
+ * Convert proposal to JSON-serializable format
+ */
+function toJsonOutput(proposal: OrganizationProposal, results?: MoveResult[]): object {
+  return {
+    proposals: proposal.proposals.map(p => ({
+      source: p.sourcePath,
+      destination: p.destination,
+      file: {
+        name: p.file.name,
+        extension: p.file.extension,
+        size: p.file.size,
+        mimeType: p.file.mimeType,
+        hash: p.file.hash,
+      },
+      category: p.category,
+      conflictExists: p.conflictExists,
+    })),
+    strategy: proposal.strategy,
+    uncategorized: proposal.uncategorized.map(f => ({
+      name: f.name,
+      path: f.path,
+      size: f.size,
+    })),
+    duplicates: proposal.duplicates?.map(d => ({
+      hash: d.hash,
+      files: d.files.map(f => ({ name: f.name, path: f.path, size: f.size })),
+      wastedBytes: d.wastedBytes,
+    })),
+    analyzedAt: proposal.analyzedAt.toISOString(),
+    results: results?.map(r => ({
+      source: r.source,
+      destination: r.destination,
+      status: r.status,
+      error: r.error,
+    })),
+  };
+}
+
+/**
+ * Detect duplicate files by computing content hashes
+ */
+async function detectDuplicates(files: FileMetadata[]): Promise<DuplicateGroup[]> {
+  const hashMap = new Map<string, FileMetadata[]>();
+
+  for (const file of files) {
+    if (file.hash) {
+      const existing = hashMap.get(file.hash) || [];
+      existing.push(file);
+      hashMap.set(file.hash, existing);
+    }
+  }
+
+  const duplicates: DuplicateGroup[] = [];
+  for (const [hash, groupFiles] of hashMap) {
+    if (groupFiles.length > 1) {
+      const totalSize = groupFiles.reduce((sum, f) => sum + f.size, 0);
+      const wastedBytes = totalSize - groupFiles[0].size;
+      duplicates.push({ hash, files: groupFiles, wastedBytes });
+    }
+  }
+
+  return duplicates.sort((a, b) => b.wastedBytes - a.wastedBytes);
+}
+
+/**
+ * Display duplicate file groups
+ */
+function displayDuplicates(duplicates: DuplicateGroup[]): void {
+  if (duplicates.length === 0) return;
+
+  const totalWasted = duplicates.reduce((sum, d) => sum + d.wastedBytes, 0);
+
+  p.log.warn(color.yellow(`\n⚠ Found ${duplicates.length} duplicate groups (${formatFileSize(totalWasted)} wasted)`));
+
+  for (const group of duplicates.slice(0, 5)) {
+    p.log.message(`\n  ${color.dim(group.hash.slice(0, 8))} - ${group.files.length} copies (${formatFileSize(group.wastedBytes)} wasted)`);
+    for (const file of group.files) {
+      p.log.message(`    ${getFileIcon(file.name)} ${file.name} ${color.dim(`(${formatFileSize(file.size)})`)}`);
+    }
+  }
+
+  if (duplicates.length > 5) {
+    p.log.message(color.dim(`\n  ... and ${duplicates.length - 5} more duplicate groups`));
+  }
+}
+
+/**
  * Main organize command
  */
 export async function organizeCommand(options: OrganizeOptions): Promise<void> {
-  p.intro(color.bgGreen(color.black(" tidyf ")));
+  const isJsonMode = options.json === true;
+
+  if (!isJsonMode) {
+    p.intro(color.bgGreen(color.black(" tidyf ")));
+  }
 
   // Initialize global config if needed
   initGlobalConfig();
@@ -372,6 +496,10 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   // Validate and resolve profile if specified
   if (options.profile) {
     if (!profileExists(options.profile)) {
+      if (isJsonMode) {
+        console.log(JSON.stringify({ error: `Profile "${options.profile}" not found` }));
+        process.exit(1);
+      }
       p.log.error(`Profile "${options.profile}" not found`);
       const profiles = listProfiles();
       if (profiles.length > 0) {
@@ -393,7 +521,9 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
       // Re-run organize with the now-existing profile
       p.log.info("Profile created. Continuing with organization...");
     }
-    p.log.info(`Profile: ${color.cyan(options.profile)}`);
+    if (!isJsonMode) {
+      p.log.info(`Profile: ${color.cyan(options.profile)}`);
+    }
   }
 
   // Resolve configuration (with profile if specified)
@@ -417,11 +547,17 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
       "~/Documents/Organized",
   );
 
-  p.log.info(`Source: ${color.cyan(sourcePath)}`);
-  p.log.info(`Target: ${color.cyan(targetPath)}`);
+  if (!isJsonMode) {
+    p.log.info(`Source: ${color.cyan(sourcePath)}`);
+    p.log.info(`Target: ${color.cyan(targetPath)}`);
+  }
 
   // Check if source directory exists
   if (!existsSync(sourcePath)) {
+    if (isJsonMode) {
+      console.log(JSON.stringify({ error: `Directory does not exist: ${sourcePath}` }));
+      process.exit(1);
+    }
     console.log();
     p.log.error(color.red("Directory does not exist"));
 
@@ -489,10 +625,13 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   }
 
   // Scan directory
-  const spinner = p.spinner();
-  spinner.start("Scanning directory...");
+  let spinner: ReturnType<typeof p.spinner> | null = null;
+  if (!isJsonMode) {
+    spinner = p.spinner();
+    spinner.start("Scanning directory...");
+  }
 
-  const files = await scanDirectory(sourcePath, {
+  let files = await scanDirectory(sourcePath, {
     recursive: options.recursive,
     maxDepth: parseInt(options.depth || "1"),
     ignore: config.ignore,
@@ -500,9 +639,23 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
     maxContentSize: config.maxContentSize,
   });
 
-  spinner.stop(`Found ${color.bold(String(files.length))} files`);
+  // Compute file hashes for duplicate detection if requested
+  if (options.detectDuplicates) {
+    for (const file of files) {
+      file.hash = await computeFileHash(file.path) || undefined;
+    }
+  }
+
+  if (!isJsonMode && spinner) {
+    spinner.stop(`Found ${color.bold(String(files.length))} files`);
+  }
 
   if (files.length === 0) {
+    if (isJsonMode) {
+      console.log(JSON.stringify({ proposals: [], strategy: "No files found", uncategorized: [], analyzedAt: new Date().toISOString() }));
+      cleanup();
+      return;
+    }
     console.log();
     p.log.warn(color.yellow("No files to organize"));
 
@@ -601,9 +754,11 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   }
 
   // Show file summary
-  p.log.info(
-    `Total size: ${formatFileSize(files.reduce((sum, f) => sum + f.size, 0))}`,
-  );
+  if (!isJsonMode) {
+    p.log.info(
+      `Total size: ${formatFileSize(files.reduce((sum, f) => sum + f.size, 0))}`,
+    );
+  }
 
   // Scan existing folder structure in target directory
   let existingFolders: string[] = [];
@@ -613,7 +768,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
       includeEmpty: false,
       ignore: config.ignore,
     });
-    if (existingFolders.length > 0) {
+    if (!isJsonMode && existingFolders.length > 0) {
       p.log.info(`Found ${color.bold(String(existingFolders.length))} existing folders in target`);
     }
   } catch {
@@ -621,14 +776,18 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
   }
 
   // Analyze with AI
-  spinner.start("Analyzing files with AI...");
+  if (!isJsonMode && spinner) {
+    spinner.start("Analyzing files with AI...");
+  }
 
   let proposal: OrganizationProposal;
   try {
     const BATCH_SIZE = 50;
 
     if (files.length > BATCH_SIZE) {
-      p.log.info(`Processing ${files.length} files in batches of ${BATCH_SIZE}...`);
+      if (!isJsonMode) {
+        p.log.info(`Processing ${files.length} files in batches of ${BATCH_SIZE}...`);
+      }
 
       let allProposals: FileMoveProposal[] = [];
       let allUncategorized: FileMetadata[] = [];
@@ -639,7 +798,9 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
         const batchNum = Math.floor(i / BATCH_SIZE) + 1;
         const totalBatches = Math.ceil(files.length / BATCH_SIZE);
 
-        spinner.start(`Analyzing batch ${batchNum}/${totalBatches} (${batch.length} files)...`);
+        if (!isJsonMode && spinner) {
+          spinner.start(`Analyzing batch ${batchNum}/${totalBatches} (${batch.length} files)...`);
+        }
 
         const batchProposal = await analyzeFiles({
           files: batch,
@@ -656,7 +817,9 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
         }
       }
 
-      spinner.stop("Analysis complete");
+      if (!isJsonMode && spinner) {
+        spinner.stop("Analysis complete");
+      }
       proposal = {
         proposals: allProposals,
         strategy: strategies.join("; "),
@@ -671,13 +834,44 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
         existingFolders,
         profileName: options.profile,
       });
-      spinner.stop("Analysis complete");
+      if (!isJsonMode && spinner) {
+        spinner.stop("Analysis complete");
+      }
     }
   } catch (error: any) {
-    spinner.stop("Analysis failed");
+    if (isJsonMode) {
+      console.log(JSON.stringify({ error: error.message }));
+      cleanup();
+      process.exit(1);
+    }
+    if (spinner) {
+      spinner.stop("Analysis failed");
+    }
     p.cancel(error.message);
     cleanup();
     process.exit(1);
+  }
+
+  // Detect duplicates if requested
+  if (options.detectDuplicates) {
+    const duplicates = await detectDuplicates(files);
+    proposal.duplicates = duplicates;
+    if (!isJsonMode && duplicates.length > 0) {
+      displayDuplicates(duplicates);
+    }
+  }
+
+  // JSON mode: output and exit
+  if (isJsonMode) {
+    if (options.dryRun || options.yes === false) {
+      console.log(JSON.stringify(toJsonOutput(proposal)));
+    } else {
+      // Execute moves and include results
+      const results = await executeProposalsQuiet(proposal.proposals, sourcePath, targetPath);
+      console.log(JSON.stringify(toJsonOutput(proposal, results)));
+    }
+    cleanup();
+    return;
   }
 
   // Display proposals
@@ -831,7 +1025,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
             break;
           }
 
-          spinner.start("Re-analyzing files with AI...");
+          spinner!.start("Re-analyzing files with AI...");
           try {
             proposal = await analyzeFiles({
               files,
@@ -841,10 +1035,10 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
               existingFolders,
               profileName: options.profile,
             });
-            spinner.stop("Analysis complete");
+            spinner!.stop("Analysis complete");
             displayAllProposals(proposal);
           } catch (error: any) {
-            spinner.stop("Analysis failed");
+            spinner!.stop("Analysis failed");
             p.log.error(error.message);
           }
           break;
@@ -866,7 +1060,7 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
             break;
           }
 
-          spinner.start(`Re-analyzing with ${pickedModel.provider}/${pickedModel.model}...`);
+          spinner!.start(`Re-analyzing with ${pickedModel.provider}/${pickedModel.model}...`);
           try {
             proposal = await analyzeFiles({
               files,
@@ -876,10 +1070,10 @@ export async function organizeCommand(options: OrganizeOptions): Promise<void> {
               existingFolders,
               profileName: options.profile,
             });
-            spinner.stop("Analysis complete");
+            spinner!.stop("Analysis complete");
             displayAllProposals(proposal);
           } catch (error: any) {
-            spinner.stop("Analysis failed");
+            spinner!.stop("Analysis failed");
             p.log.error(error.message);
           }
           break;

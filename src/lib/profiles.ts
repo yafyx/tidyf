@@ -17,6 +17,7 @@ import { join } from "path";
 import { homedir } from "os";
 import type { Profile, ProfileMetadata, ProfileExport } from "../types/profile.ts";
 import type { TidyConfig } from "../types/config.ts";
+import { getPreset } from "./presets.ts";
 
 const CONFIG_DIR = ".tidy";
 const PROFILES_DIR = "profiles";
@@ -327,4 +328,40 @@ export function importProfile(data: ProfileExport, overrideName?: string): strin
 export function getProfileConfigFields(profile: Profile): Partial<TidyConfig> {
 	const { name, description, createdAt, modifiedAt, ...configFields } = profile;
 	return configFields;
+}
+
+/**
+ * Install a built-in preset as a profile
+ * @param presetName The name of the preset (developer, creative, student, downloads)
+ * @param profileName Optional custom name for the installed profile
+ * @returns The name of the installed profile
+ */
+export function installPreset(presetName: string, profileName?: string): string {
+	const preset = getPreset(presetName);
+	if (!preset) {
+		throw new Error(`Preset "${presetName}" not found. Available: developer, creative, student, downloads`);
+	}
+
+	const name = profileName || presetName;
+
+	const validation = validateProfileName(name);
+	if (!validation.valid) {
+		throw new Error(validation.error);
+	}
+
+	if (profileExists(name)) {
+		throw new Error(`Profile "${name}" already exists. Use a different name or delete the existing profile.`);
+	}
+
+	const profile: Profile = {
+		...preset.profile,
+		name,
+		createdAt: new Date().toISOString(),
+		modifiedAt: new Date().toISOString(),
+	};
+
+	writeProfile(name, profile);
+	writeProfileRules(name, preset.rules);
+
+	return name;
 }

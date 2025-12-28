@@ -84,6 +84,8 @@ program
 	.option("-t, --target <path>", "Target directory for organized files")
 	.option("-m, --model <id>", "Override model (provider/model)")
 	.option("-p, --profile <name>", "Use named profile")
+	.option("--json", "Output JSON instead of interactive UI")
+	.option("--detect-duplicates", "Detect duplicate files by content hash")
 	.action(async (path, options) => {
 		await organizeCommand({ path: path || options.source, ...options });
 	});

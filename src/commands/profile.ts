@@ -14,6 +14,7 @@ import {
 	exportProfile,
 	getProfileRulesPath,
 	importProfile,
+	installPreset,
 	listProfiles,
 	profileExists,
 	readProfile,
@@ -22,6 +23,7 @@ import {
 	writeProfile,
 	writeProfileRules,
 } from "../lib/profiles.ts";
+import { listPresets, getPresetNames } from "../lib/presets.ts";
 import {
 	getDefaultRules,
 	resolveConfig,
@@ -96,6 +98,19 @@ export async function profileCommand(options: ProfileCommandOptions): Promise<vo
 			await importProfileFromFile(options.name);
 			break;
 
+		case "install":
+			if (!options.name) {
+				p.log.error("Preset name required. Usage: tidyf profile install <preset> [profile-name]");
+				p.log.info(`Available presets: ${getPresetNames().join(", ")}`);
+				break;
+			}
+			await installPresetInteractive(options.name, options.args?.[0]);
+			break;
+
+		case "presets":
+			listPresetsInteractive();
+			break;
+
 		case "interactive":
 		default:
 			await interactiveMenu();
@@ -125,6 +140,11 @@ async function interactiveMenu(): Promise<void> {
 				{
 					value: "create",
 					label: "Create new profile",
+				},
+				{
+					value: "install",
+					label: "Install preset",
+					hint: "developer, creative, student, downloads",
 				},
 				{
 					value: "edit",
@@ -163,6 +183,10 @@ async function interactiveMenu(): Promise<void> {
 
 			case "create":
 				await createProfileInteractive();
+				break;
+
+			case "install":
+				await installPresetMenuInteractive();
 				break;
 
 			case "edit": {
@@ -840,5 +864,80 @@ async function importProfileFromFile(filePath: string): Promise<void> {
 		p.log.success(`Imported profile "${importedName}"`);
 	} catch (error: any) {
 		p.log.error(`Failed to import: ${error.message}`);
+	}
+}
+
+/**
+ * List available presets
+ */
+function listPresetsInteractive(): void {
+	const presets = listPresets();
+
+	console.log();
+	p.log.info(color.bold(`${presets.length} available preset(s):`));
+	console.log();
+
+	for (const preset of presets) {
+		p.log.message(`  ${color.cyan("●")} ${color.bold(preset.name)} - ${preset.description}`);
+	}
+	console.log();
+	p.log.message(color.dim("Install with: tidyf profile install <preset> [custom-name]"));
+	console.log();
+}
+
+/**
+ * Install a preset as a profile (interactive menu version)
+ */
+async function installPresetMenuInteractive(): Promise<void> {
+	const presets = listPresets();
+
+	const selected = await p.select({
+		message: "Select preset to install:",
+		options: presets.map((preset) => ({
+			value: preset.name,
+			label: preset.name,
+			hint: preset.description,
+		})),
+	});
+
+	if (p.isCancel(selected)) return;
+
+	const presetName = selected as string;
+
+	// Ask for custom name
+	const customName = await p.text({
+		message: "Profile name (or leave empty to use preset name):",
+		placeholder: presetName,
+		validate: (value) => {
+			if (!value) return; // Empty is OK, will use preset name
+			const validation = validateProfileName(value);
+			if (!validation.valid) return validation.error;
+			if (profileExists(value)) return `Profile "${value}" already exists`;
+		},
+	});
+
+	if (p.isCancel(customName)) return;
+
+	const profileName = customName || undefined;
+
+	// Check if using preset name and it exists
+	if (!profileName && profileExists(presetName)) {
+		p.log.error(`Profile "${presetName}" already exists. Please choose a different name.`);
+		return;
+	}
+
+	await installPresetInteractive(presetName, profileName);
+}
+
+/**
+ * Install a preset as a profile (CLI version)
+ */
+async function installPresetInteractive(presetName: string, profileName?: string): Promise<void> {
+	try {
+		const installedName = installPreset(presetName, profileName);
+		p.log.success(`Installed preset "${presetName}" as profile "${installedName}"`);
+		p.log.message(color.dim(`Use with: tidyf -p ${installedName} <path>`));
+	} catch (error: any) {
+		p.log.error(error.message);
 	}
 }

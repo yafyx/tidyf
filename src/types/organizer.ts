@@ -22,6 +22,8 @@ export interface FileMetadata {
   mimeType?: string;
   /** Optional content preview (first N bytes/lines) */
   contentPreview?: string;
+  /** Content hash for duplicate detection */
+  hash?: string;
 }
 
 /**
@@ -57,6 +59,18 @@ export interface FileMoveProposal {
 }
 
 /**
+ * A group of duplicate files (same content hash)
+ */
+export interface DuplicateGroup {
+  /** Content hash shared by all files */
+  hash: string;
+  /** Files with identical content */
+  files: FileMetadata[];
+  /** Total wasted space (all but one copy) */
+  wastedBytes: number;
+}
+
+/**
  * Result of AI analysis
  */
 export interface OrganizationProposal {
@@ -68,6 +82,8 @@ export interface OrganizationProposal {
   uncategorized: FileMetadata[];
   /** Timestamp of analysis */
   analyzedAt: Date;
+  /** Detected duplicate file groups */
+  duplicates?: DuplicateGroup[];
 }
 
 /**
@@ -90,6 +106,10 @@ export interface OrganizeOptions {
   model?: string;
   /** Profile name to use */
   profile?: string;
+  /** Output JSON instead of interactive UI */
+  json?: boolean;
+  /** Detect duplicate files by content hash */
+  detectDuplicates?: boolean;
 }
 
 /**

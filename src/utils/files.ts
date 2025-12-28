@@ -2,7 +2,8 @@
  * File system utilities for tidy
  */
 
-import { rename, mkdir, access, copyFile, unlink, stat } from "fs/promises";
+import { rename, mkdir, access, copyFile, unlink, stat, readFile } from "fs/promises";
+import { createHash } from "crypto";
 import { dirname, join, basename, extname } from "path";
 import { existsSync } from "fs";
 import type { MoveResult, MoveStatus } from "../types/organizer.ts";
@@ -194,5 +195,18 @@ export async function isFile(path: string): Promise<boolean> {
     return stats.isFile();
   } catch {
     return false;
+  }
+}
+
+/**
+ * Compute a hash of file contents for duplicate detection
+ * Uses MD5 for speed (not cryptographic security)
+ */
+export async function computeFileHash(filePath: string): Promise<string | null> {
+  try {
+    const content = await readFile(filePath);
+    return createHash("md5").update(content).digest("hex");
+  } catch {
+    return null;
   }
 }
