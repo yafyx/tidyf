@@ -5,19 +5,29 @@
  */
 
 import { Command } from "commander";
-import updateNotifier from "simple-update-notifier";
 import { createRequire } from "module";
 import { configCommand } from "./commands/config.ts";
 import { organizeCommand } from "./commands/organize.ts";
 import { profileCommand } from "./commands/profile.ts";
 import { undoCommand } from "./commands/undo.ts";
 import { watchCommand } from "./commands/watch.ts";
+import { updateCommand } from "./commands/update.ts";
+import { checkForUpdates, formatUpdateMessage } from "./utils/update.ts";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json");
 
 // Check for updates (non-blocking, cached for 1 day)
-updateNotifier({ pkg });
+// We use a fire-and-forget approach here but we need to handle promise rejection to avoid crash
+checkForUpdates(pkg.version)
+	.then((info) => {
+		if (info) {
+			console.error(formatUpdateMessage(info.current, info.latest));
+		}
+	})
+	.catch(() => {
+		// Ignore errors during background check
+	});
 
 const program = new Command();
 
@@ -25,6 +35,15 @@ program
 	.name("tidyf")
 	.description("AI-powered file organizer using opencode.ai")
 	.version(pkg.version);
+
+// Update command
+program
+	.command("update")
+	.alias("up")
+	.description("Check for updates and install the latest version")
+	.action(async () => {
+		await updateCommand(pkg.version);
+	});
 
 // Watch command - monitor folders for new files
 program
