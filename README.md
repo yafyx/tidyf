@@ -1,5 +1,10 @@
 # tidyf
 
+[![npm version](https://img.shields.io/npm/v/tidyf.svg)](https://www.npmjs.com/package/tidyf)
+[![npm downloads](https://img.shields.io/npm/dm/tidyf.svg)](https://www.npmjs.com/package/tidyf)
+[![license](https://img.shields.io/npm/l/tidyf.svg)](https://github.com/yafyx/tidy/blob/main/LICENSE)
+[![node](https://img.shields.io/node/v/tidyf.svg)](https://www.npmjs.com/package/tidyf)
+
 AI-powered file organizer CLI using [opencode.ai](https://opencode.ai)
 
 ```text
