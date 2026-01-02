@@ -4,7 +4,6 @@
  * Uses chokidar to watch directories for new files and emits batched events
  */
 
-import chokidar from "chokidar";
 import { EventEmitter } from "events";
 import type { WatchEvent } from "../types/organizer.ts";
 
@@ -24,7 +23,7 @@ export interface WatcherOptions {
  * File watcher that batches events and emits after debounce
  */
 export class FileWatcher extends EventEmitter {
-  private watcher: chokidar.FSWatcher | null = null;
+  private watcher: any = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private pendingFiles: Map<string, WatchEvent> = new Map();
   private isRunning = false;
@@ -37,8 +36,17 @@ export class FileWatcher extends EventEmitter {
   /**
    * Start watching the specified paths
    */
-  start(paths: string[]): void {
+  async start(paths: string[]): Promise<void> {
     if (this.isRunning) {
+      return;
+    }
+
+    // Dynamically import chokidar to avoid build issues with fsevents in Raycast
+    let chokidar;
+    try {
+      chokidar = await import("chokidar");
+    } catch (e) {
+      console.warn("Failed to load chokidar, watching disabled");
       return;
     }
 
@@ -63,9 +71,9 @@ export class FileWatcher extends EventEmitter {
       },
     });
 
-    this.watcher.on("add", (path) => this.handleEvent("add", path));
-    this.watcher.on("change", (path) => this.handleEvent("change", path));
-    this.watcher.on("error", (error) => this.emit("error", error));
+    this.watcher.on("add", (path: string) => this.handleEvent("add", path));
+    this.watcher.on("change", (path: string) => this.handleEvent("change", path));
+    this.watcher.on("error", (error: Error) => this.emit("error", error));
 
     this.watcher.on("ready", () => {
       this.emit("ready", paths);

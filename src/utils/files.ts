@@ -205,7 +205,7 @@ export async function isFile(path: string): Promise<boolean> {
 export async function computeFileHash(filePath: string): Promise<string | null> {
   try {
     const content = await readFile(filePath);
-    return createHash("md5").update(content).digest("hex");
+    return createHash("md5").update(content as unknown as Uint8Array).digest("hex");
   } catch {
     return null;
   }

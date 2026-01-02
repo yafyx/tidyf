@@ -264,7 +264,7 @@ export async function readFilePreview(
     const buffer = Buffer.alloc(maxSize);
     const file = await readFile(filePath);
     const bytesToRead = Math.min(file.length, maxSize);
-    file.copy(buffer, 0, 0, bytesToRead);
+    file.copy(buffer as unknown as Uint8Array, 0, 0, bytesToRead);
 
     const content = buffer.toString("utf-8", 0, bytesToRead);
 
