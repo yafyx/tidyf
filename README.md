@@ -3,14 +3,20 @@
   <img src="logo-white.svg#gh-dark-mode-only" width="120" alt="tidyf logo" />
 </div>
 
-# tidyf
+<h1 align="center">tidyf</h1>
+
+<div align="center">
 
 [![npm version](https://img.shields.io/npm/v/tidyf.svg)](https://www.npmjs.com/package/tidyf)
 [![npm downloads](https://img.shields.io/npm/dm/tidyf.svg)](https://www.npmjs.com/package/tidyf)
-[![license](https://img.shields.io/npm/l/tidyf.svg)](https://github.com/yafyx/tidy/blob/main/LICENSE)
-[![node](https://img.shields.io/node/v/tidyf.svg)](https://www.npmjs.com/package/tidyf)
+[![license](https://img.shields.io/npm/l/tidyf.svg)](https://github.com/yafyx/tidyf/blob/main/LICENSE)
+[![node](https://img.shields.io/node/v/tidyf.svg?logo=node.js)](https://www.npmjs.com/package/tidyf)
 
-AI-powered file organizer CLI using [opencode.ai](https://opencode.ai)
+</div>
+
+<p align="center">
+  AI-powered file organizer CLI using <a href="https://opencode.ai">opencode.ai</a>
+</p>
 
 ```text
 ┌   tidyf 
@@ -371,8 +377,8 @@ Check if the file matches an ignore pattern in `~/.tidy/settings.json`.
 
 ```bash
 # Clone the repo
-git clone https://github.com/yafyx/tidy.git
-cd tidy
+git clone https://github.com/yafyx/tidyf.git
+cd tidyf
 
 # Install dependencies
 bun install
