@@ -11,13 +11,17 @@ import {
   getRecentHistory,
   deleteHistoryEntry,
   type HistoryEntry,
+  getGlobalConfigPath,
+  readConfig,
+  writeConfig,
+  resolveConfig,
 } from "tidyf";
 import { getAvailableModels } from "tidyf";
 
 import * as path from "path";
 import * as os from "os";
 
-// Redefine ModelSelection locally since it's not exported from tidyf package main entry correctly for ESM/CJS interop in Raycast
+// Redefine ModelSelection locally
 export interface ModelSelection {
   provider: string;
   model: string;
@@ -27,6 +31,7 @@ export type {
   FileMetadata,
   OrganizationProposal,
   FileMoveProposal,
+  TidyConfig,
 } from "tidyf";
 
 // Provider and model types for grouped selection
@@ -276,6 +281,33 @@ export function safeDeleteHistoryEntry(id: string): boolean {
   } catch (error) {
     console.error("Failed to delete history:", error);
     return false;
+  }
+}
+
+// =============================================================================
+// Config Functions
+// =============================================================================
+
+export function safeGetConfig() {
+  try {
+    const configPath = getGlobalConfigPath();
+    // Use readConfig from tidyf which handles reading/parsing
+    return readConfig(configPath);
+  } catch (error) {
+    console.error("Failed to read config:", error);
+    return {};
+  }
+}
+
+export function safeSaveConfig(config: any) {
+  try {
+    const configPath = getGlobalConfigPath();
+    // Use writeConfig from tidyf
+    writeConfig(configPath, config);
+    return true;
+  } catch (error) {
+    console.error("Failed to save config:", error);
+    throw error;
   }
 }
 

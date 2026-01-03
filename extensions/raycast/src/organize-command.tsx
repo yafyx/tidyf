@@ -6,6 +6,7 @@ import {
   showToast,
   Toast,
   popToRoot,
+  Icon,
 } from "@raycast/api";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -18,6 +19,8 @@ import {
   persistHistory,
   type ProviderWithModels,
 } from "./utils/core-bridge";
+import HistoryCommand from "./history-command";
+import SettingsCommand from "./settings-command";
 import { ProposalReview } from "./components/ProposalReview";
 import { moveFile, type FileMetadata } from "tidyf";
 
@@ -291,6 +294,22 @@ export default function OrganizeCommand() {
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Scan & Organize" onSubmit={handleSubmit} />
+          <ActionPanel.Section title="Navigation">
+            <Action.Push
+              title="View History"
+              target={<HistoryCommand />}
+              icon={Icon.Clock}
+              shortcut={{ modifiers: ["cmd"], key: "h" }}
+            />
+          </ActionPanel.Section>
+          <ActionPanel.Section title="Configuration">
+            <Action.Push
+              title="Edit Config"
+              target={<SettingsCommand />}
+              icon={Icon.Gear}
+              shortcut={{ modifiers: ["cmd"], key: "e" }}
+            />
+          </ActionPanel.Section>
         </ActionPanel>
       }
     >

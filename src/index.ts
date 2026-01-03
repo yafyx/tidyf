@@ -15,7 +15,7 @@ export type {
   WatchEvent,
   MoveStatus,
   MoveResult,
-} from "./types/organizer.ts";
+} from "./types/organizer";
 
 export type {
   ModelSelection,
@@ -23,7 +23,7 @@ export type {
   CategoryRule,
   TidyConfig,
   ConfigOptions,
-} from "./types/config.ts";
+} from "./types/config";
 
 // Config
 export {
@@ -39,7 +39,7 @@ export {
   expandPath,
   shouldIgnore,
   initGlobalConfig,
-} from "./lib/config.ts";
+} from "./lib/config";
 
 // Scanner
 export {
@@ -48,7 +48,7 @@ export {
   getFileCategory,
   groupFilesByCategory,
   type ScanOptions,
-} from "./lib/scanner.ts";
+} from "./lib/scanner";
 
 // File utilities
 export {
@@ -61,7 +61,7 @@ export {
   isDirectory,
   isFile,
   type ConflictStrategy,
-} from "./utils/files.ts";
+} from "./utils/files";
 
 // Icons
 export {
@@ -69,7 +69,7 @@ export {
   getCategoryIcon,
   getStatusIcon,
   getStatusIndicator,
-} from "./utils/icons.ts";
+} from "./utils/icons";
 
 // AI
 export {
@@ -78,14 +78,14 @@ export {
   getAvailableModels,
   cleanup,
   type AnalyzeFilesOptions,
-} from "./lib/opencode.ts";
+} from "./lib/opencode";
 
 // Watcher
 export {
   FileWatcher,
   createWatcher,
   type WatcherOptions,
-} from "./lib/watcher.ts";
+} from "./lib/watcher";
 
 // History - for undo functionality
 export {
@@ -98,9 +98,9 @@ export {
   deleteHistoryEntry,
   clearHistory,
   type HistoryEntry,
-} from "./lib/history.ts";
+} from "./lib/history";
 
 // Commands (for programmatic use)
-export { organizeCommand } from "./commands/organize.ts";
-export { watchCommand } from "./commands/watch.ts";
-export { configCommand } from "./commands/config.ts";
+export { organizeCommand } from "./commands/organize";
+export { watchCommand } from "./commands/watch";
+export { configCommand } from "./commands/config";
