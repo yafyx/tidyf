@@ -12,6 +12,7 @@
     "noUnusedLocals": false,
     "allowImportingTsExtensions": true,
     "noEmit": true,
+    "baseUrl": ".",
     "paths": {
       "tidyf": ["../../src/raycast-index.ts"],
       "react": ["./node_modules/@types/react"]

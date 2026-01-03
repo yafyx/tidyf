@@ -87,6 +87,19 @@ export {
   type WatcherOptions,
 } from "./lib/watcher.ts";
 
+// History - for undo functionality
+export {
+  readHistory,
+  createHistoryEntry,
+  addMoveToHistory,
+  saveHistoryEntry,
+  getHistoryEntry,
+  getRecentHistory,
+  deleteHistoryEntry,
+  clearHistory,
+  type HistoryEntry,
+} from "./lib/history.ts";
+
 // Commands (for programmatic use)
 export { organizeCommand } from "./commands/organize.ts";
 export { watchCommand } from "./commands/watch.ts";
