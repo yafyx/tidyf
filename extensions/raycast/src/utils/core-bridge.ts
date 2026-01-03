@@ -14,7 +14,7 @@ import {
   getGlobalConfigPath,
   readConfig,
   writeConfig,
-  resolveConfig,
+  type TidyConfig,
 } from "tidyf";
 import { getAvailableModels } from "tidyf";
 
@@ -299,7 +299,7 @@ export function safeGetConfig() {
   }
 }
 
-export function safeSaveConfig(config: any) {
+export function safeSaveConfig(config: TidyConfig) {
   try {
     const configPath = getGlobalConfigPath();
     // Use writeConfig from tidyf
