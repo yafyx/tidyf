@@ -81,6 +81,19 @@ export {
   type AnalyzeFilesOptions,
 } from "./lib/opencode.raycast.ts";
 
+// History - for undo functionality
+export {
+  readHistory,
+  createHistoryEntry,
+  addMoveToHistory,
+  saveHistoryEntry,
+  getHistoryEntry,
+  getRecentHistory,
+  deleteHistoryEntry,
+  clearHistory,
+  type HistoryEntry,
+} from "./lib/history.ts";
+
 // Intentionally exclude any CLI / commander entrypoints.
 
 

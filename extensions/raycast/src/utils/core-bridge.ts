@@ -4,6 +4,13 @@ import {
   analyzeFiles,
   type ScanOptions,
   type AnalyzeFilesOptions,
+  type FileMetadata,
+  createHistoryEntry,
+  addMoveToHistory,
+  saveHistoryEntry,
+  getRecentHistory,
+  deleteHistoryEntry,
+  type HistoryEntry,
 } from "tidyf";
 import { getAvailableModels } from "tidyf";
 
@@ -38,6 +45,9 @@ type Provider = { id: string; name?: string; models?: unknown };
 type ModelsResponse = { data?: { providers?: Provider[] } };
 
 export type { ProviderWithModels };
+
+// Re-export HistoryEntry type for consumers
+export type { HistoryEntry };
 
 /**
  * Format model ID into a readable display name
@@ -75,7 +85,10 @@ function formatProviderName(providerId: string): string {
     ollama: "Ollama",
     azure: "Azure OpenAI",
   };
-  return providerNames[providerId] || providerId.charAt(0).toUpperCase() + providerId.slice(1);
+  return (
+    providerNames[providerId] ||
+    providerId.charAt(0).toUpperCase() + providerId.slice(1)
+  );
 }
 
 /**
@@ -175,12 +188,12 @@ export async function safeScanDirectory(
  * Wraps the analyzeFiles function with Raycast progress feedback
  */
 export async function safeAnalyzeFiles(options: {
-  files: any[];
+  files: FileMetadata[];
   targetDir: string;
   model: ModelSelection;
 }) {
   try {
-    return await analyzeFiles(options as any as AnalyzeFilesOptions);
+    return await analyzeFiles(options as unknown as AnalyzeFilesOptions);
   } catch (error) {
     if (
       error instanceof Error &&
@@ -218,4 +231,96 @@ export function resolvePath(shortPath: string) {
     return path.join(getHomeDir(), shortPath.slice(1));
   }
   return shortPath;
+}
+
+// =============================================================================
+// History Functions - for undo functionality
+// =============================================================================
+
+/**
+ * Get recent history entries with error handling
+ */
+export function safeGetRecentHistory(limit: number = 20): HistoryEntry[] {
+  try {
+    return getRecentHistory(limit);
+  } catch (error) {
+    console.error("Failed to read history:", error);
+    return [];
+  }
+}
+
+/**
+ * Create and track a new history entry for an organization operation
+ */
+export function createOperationHistory(
+  sourceDir: string,
+  targetDir: string,
+): HistoryEntry {
+  return createHistoryEntry(sourceDir, targetDir);
+}
+
+/**
+ * Record a file move in the history entry
+ */
+export function recordMove(
+  entry: HistoryEntry,
+  source: string,
+  destination: string,
+): void {
+  addMoveToHistory(entry, source, destination);
+}
+
+/**
+ * Persist the history entry to disk
+ */
+export function persistHistory(entry: HistoryEntry): void {
+  try {
+    saveHistoryEntry(entry);
+  } catch (error) {
+    console.error("Failed to save history:", error);
+  }
+}
+
+/**
+ * Delete a history entry by ID
+ */
+export function safeDeleteHistoryEntry(id: string): boolean {
+  try {
+    deleteHistoryEntry(id);
+    return true;
+  } catch (error) {
+    console.error("Failed to delete history:", error);
+    return false;
+  }
+}
+
+/**
+ * Undo a single file move (move file back to original location)
+ */
+export async function undoFileMove(
+  source: string,
+  destination: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { rename, mkdir } = await import("fs/promises");
+    const { existsSync } = await import("fs");
+
+    // Check if file still exists at destination
+    if (!existsSync(destination)) {
+      return { success: false, error: "File no longer exists at destination" };
+    }
+
+    // Ensure source directory exists
+    const sourceDir = path.dirname(source);
+    await mkdir(sourceDir, { recursive: true });
+
+    // Move file back
+    await rename(destination, source);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

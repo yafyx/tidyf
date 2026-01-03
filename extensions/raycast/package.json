@@ -18,6 +18,13 @@
       "description": "Instantly organize your Downloads folder",
       "mode": "no-view",
       "icon": "command-icon.png"
+    },
+    {
+      "name": "history-command",
+      "title": "View Organization History",
+      "description": "View and undo recent file organization operations",
+      "mode": "view",
+      "icon": "command-icon.png"
     }
   ],
   "author": "thomas",

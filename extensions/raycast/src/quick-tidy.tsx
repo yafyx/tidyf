@@ -4,6 +4,9 @@ import {
   safeAnalyzeFiles,
   resolvePath,
   safeGetAvailableModels,
+  createOperationHistory,
+  recordMove,
+  persistHistory,
 } from "./utils/core-bridge";
 import { moveFile } from "tidyf";
 
@@ -39,7 +42,10 @@ export default async function Command() {
     let modelToUse = { provider: "opencode", model: "claude-sonnet-4-5" };
 
     if (providers.length > 0 && providers[0].models.length > 0) {
-      modelToUse = { provider: providers[0].id, model: providers[0].models[0].id };
+      modelToUse = {
+        provider: providers[0].id,
+        model: providers[0].models[0].id,
+      };
     }
 
     const proposal = (await safeAnalyzeFiles({
@@ -60,19 +66,29 @@ export default async function Command() {
       return;
     }
 
+    // Create history entry for this operation
+    const historyEntry = createOperationHistory(downloadsPath, downloadsPath);
+
     let movedCount = 0;
     for (const p of highConfidence) {
       try {
         await moveFile(p.file.path, p.destination);
+        // Record successful move in history
+        recordMove(historyEntry, p.file.path, p.destination);
         movedCount++;
       } catch (e) {
         console.error(e);
       }
     }
 
+    // Persist history if moves succeeded
+    if (movedCount > 0) {
+      persistHistory(historyEntry);
+    }
+
     toast.style = Toast.Style.Success;
     toast.title = "Tidy Complete";
-    toast.message = `Moved ${movedCount} files to organized folders.`;
+    toast.message = `Moved ${movedCount} files. Use History to undo.`;
   } catch (error) {
     toast.style = Toast.Style.Failure;
     toast.title = "Failed";
