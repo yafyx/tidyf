@@ -10,6 +10,12 @@ import { getAvailableModels } from "tidyf";
 import * as path from "path";
 import * as os from "os";
 
+// Redefine ModelSelection locally since it's not exported from tidyf package main entry correctly for ESM/CJS interop in Raycast
+export interface ModelSelection {
+  provider: string;
+  model: string;
+}
+
 export type {
   FileMetadata,
   OrganizationProposal,
@@ -168,9 +174,13 @@ export async function safeScanDirectory(
 /**
  * Wraps the analyzeFiles function with Raycast progress feedback
  */
-export async function safeAnalyzeFiles(options: AnalyzeFilesOptions) {
+export async function safeAnalyzeFiles(options: {
+  files: any[];
+  targetDir: string;
+  model: ModelSelection;
+}) {
   try {
-    return await analyzeFiles(options);
+    return await analyzeFiles(options as any as AnalyzeFilesOptions);
   } catch (error) {
     if (
       error instanceof Error &&
