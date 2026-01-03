@@ -51,25 +51,10 @@ export type { HistoryEntry };
 
 /**
  * Format model ID into a readable display name
- * e.g., "claude-3-5-sonnet-20241022" -> "Claude 3.5 Sonnet"
+ * Now returns the original model ID as per requirement
  */
 function formatModelName(modelId: string): string {
-  // Remove date suffixes like -20241022
-  let name = modelId.replace(/-\d{8}$/, "");
-
-  // Replace common patterns
-  name = name
-    .replace(/^claude-/, "Claude ")
-    .replace(/^gpt-/, "GPT-")
-    .replace(/^gemini-/, "Gemini ")
-    .replace(/-/g, " ")
-    .replace(/(\d)\.(\d)/g, "$1.$2"); // Preserve version dots
-
-  // Title case
-  return name
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return modelId;
 }
 
 /**
