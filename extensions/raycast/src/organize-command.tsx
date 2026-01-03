@@ -12,7 +12,6 @@ import {
   safeAnalyzeFiles,
   resolvePath,
   safeGetAvailableModels,
-  getProviderIcon,
   type ProviderWithModels,
 } from "./utils/core-bridge";
 import { ProposalReview } from "./components/ProposalReview";
@@ -165,7 +164,6 @@ export default function OrganizeCommand() {
                 key={`${provider.id}/${model.id}`}
                 value={`${provider.id}/${model.id}`}
                 title={model.name}
-                icon={getProviderIcon(provider.id)}
               />
             ))}
           </Form.Dropdown.Section>
