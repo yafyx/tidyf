@@ -32,11 +32,15 @@ export default function OrganizeCommand() {
   useEffect(() => {
     safeGetAvailableModels().then((loadedProviders) => {
       setProviders(loadedProviders);
-      // Set first available model as default (format: provider/model)
-      if (loadedProviders.length > 0 && loadedProviders[0].models.length > 0 && !selectedModel) {
-        const firstProvider = loadedProviders[0];
-        const firstModel = firstProvider.models[0];
-        setSelectedModel(`${firstProvider.id}/${firstModel.id}`);
+      // Only set default if no value is stored (selectedModel is empty)
+      // and providers are available
+      if (loadedProviders.length > 0 && loadedProviders[0].models.length > 0) {
+        setSelectedModel((current) => {
+          if (current) return current; // Keep stored value
+          const firstProvider = loadedProviders[0];
+          const firstModel = firstProvider.models[0];
+          return `${firstProvider.id}/${firstModel.id}`;
+        });
       }
     });
   }, []);
@@ -47,6 +51,15 @@ export default function OrganizeCommand() {
       style: Toast.Style.Animated,
       title: "Scanning files...",
     });
+
+    // Validate model is selected
+    if (!values.model || !values.model.includes("/")) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "No model selected";
+      toast.message = "Please select an AI model.";
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const resolvedPath = resolvePath(values.path[0] || "~/Downloads");
@@ -87,6 +100,7 @@ export default function OrganizeCommand() {
               title: "Moving files...",
             });
             let movedCount = 0;
+            let failedCount = 0;
 
             for (const p of selectedProposals) {
               try {
@@ -94,12 +108,19 @@ export default function OrganizeCommand() {
                 movedCount++;
               } catch (e) {
                 console.error(`Failed to move ${p.file.path}`, e);
+                failedCount++;
               }
             }
 
-            applyToast.style = Toast.Style.Success;
-            applyToast.title = "Organization Complete";
-            applyToast.message = `Moved ${movedCount} files.`;
+            if (failedCount > 0) {
+              applyToast.style = Toast.Style.Failure;
+              applyToast.title = "Partial Success";
+              applyToast.message = `Moved ${movedCount} files. ${failedCount} failed.`;
+            } else {
+              applyToast.style = Toast.Style.Success;
+              applyToast.title = "Organization Complete";
+              applyToast.message = `Moved ${movedCount} files.`;
+            }
           }}
         />,
       );
