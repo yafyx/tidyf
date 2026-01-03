@@ -34,12 +34,14 @@ type ModelSelection = {
 export default function OrganizeCommand() {
   const { push } = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
+  const [enableTarget, setEnableTarget] = useState(false);
   const [providers, setProviders] = useState<ProviderWithModels[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
 
   // Cache for regenerate functionality
   const cachedFilesRef = useRef<FileMetadata[]>([]);
-  const cachedPathRef = useRef<string>("");
+  const cachedSourceDirRef = useRef<string>("");
+  const cachedTargetDirRef = useRef<string>("");
   const currentModelRef = useRef<ModelSelection | null>(null);
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export default function OrganizeCommand() {
    */
   const analyzeAndNavigate = async (
     files: FileMetadata[],
+    sourceDir: string,
     targetDir: string,
     model: ModelSelection,
   ) => {
@@ -97,7 +100,7 @@ export default function OrganizeCommand() {
             await handleRegenerate(newModel);
           }}
           onApply={async (selectedProposals: LocalFileMoveProposal[]) => {
-            await handleApply(selectedProposals, targetDir);
+            await handleApply(selectedProposals, sourceDir, targetDir);
           }}
         />,
       );
@@ -113,7 +116,7 @@ export default function OrganizeCommand() {
    * Handle regenerate with a specific model
    */
   const handleRegenerate = async (model: ModelSelection) => {
-    if (cachedFilesRef.current.length === 0 || !cachedPathRef.current) {
+    if (cachedFilesRef.current.length === 0 || !cachedSourceDirRef.current) {
       await showToast({
         style: Toast.Style.Failure,
         title: "Cannot Regenerate",
@@ -132,7 +135,7 @@ export default function OrganizeCommand() {
     try {
       const proposal = await safeAnalyzeFiles({
         files: cachedFilesRef.current,
-        targetDir: cachedPathRef.current,
+        targetDir: cachedTargetDirRef.current,
         model,
       });
 
@@ -153,7 +156,11 @@ export default function OrganizeCommand() {
             await handleRegenerate(newModel);
           }}
           onApply={async (selectedProposals: LocalFileMoveProposal[]) => {
-            await handleApply(selectedProposals, cachedPathRef.current);
+            await handleApply(
+              selectedProposals,
+              cachedSourceDirRef.current,
+              cachedTargetDirRef.current,
+            );
           }}
         />,
       );
@@ -169,6 +176,7 @@ export default function OrganizeCommand() {
    */
   const handleApply = async (
     selectedProposals: LocalFileMoveProposal[],
+    sourceDir: string,
     targetDir: string,
   ) => {
     const applyToast = await showToast({
@@ -177,7 +185,7 @@ export default function OrganizeCommand() {
     });
 
     // Create history entry for this operation
-    const historyEntry = createOperationHistory(targetDir, targetDir);
+    const historyEntry = createOperationHistory(sourceDir, targetDir);
 
     let movedCount = 0;
     let failedCount = 0;
@@ -212,7 +220,12 @@ export default function OrganizeCommand() {
     }
   };
 
-  const handleSubmit = async (values: { path: string; model: string }) => {
+  const handleSubmit = async (values: {
+    path: string;
+    enableTarget: boolean;
+    targetPath?: string;
+    model: string;
+  }) => {
     setIsLoading(true);
     const toast = await showToast({
       style: Toast.Style.Animated,
@@ -229,7 +242,14 @@ export default function OrganizeCommand() {
     }
 
     try {
-      const resolvedPath = resolvePath(values.path[0] || "~/Downloads");
+      const sourcePath = resolvePath(values.path[0] || "~/Downloads");
+
+      // Determine target path
+      // If enabled and selected, use it. Otherwise default to source.
+      const targetPath =
+        values.enableTarget && values.targetPath?.[0]
+          ? resolvePath(values.targetPath[0])
+          : sourcePath;
 
       // Parse provider/model from the combined value
       const [providerId, ...modelParts] = values.model.split("/");
@@ -237,7 +257,7 @@ export default function OrganizeCommand() {
       const model = { provider: providerId, model: modelId };
 
       // 1. Scan
-      const files = await safeScanDirectory(resolvedPath, { recursive: false });
+      const files = await safeScanDirectory(sourcePath, { recursive: false });
       if (files.length === 0) {
         toast.style = Toast.Style.Failure;
         toast.title = "No files found";
@@ -248,13 +268,14 @@ export default function OrganizeCommand() {
 
       // Cache for regenerate
       cachedFilesRef.current = files;
-      cachedPathRef.current = resolvedPath;
+      cachedSourceDirRef.current = sourcePath;
+      cachedTargetDirRef.current = targetPath;
       currentModelRef.current = model;
 
       toast.hide();
 
       // 2. Analyze and navigate
-      await analyzeAndNavigate(files, resolvedPath, model);
+      await analyzeAndNavigate(files, sourcePath, targetPath, model);
     } catch (error) {
       toast.style = Toast.Style.Failure;
       toast.title = "Failed";
@@ -281,6 +302,22 @@ export default function OrganizeCommand() {
         canChooseFiles={false}
         defaultValue={["~/Downloads"]}
       />
+      <Form.Checkbox
+        id="enableTarget"
+        label="Move to separate folder"
+        value={enableTarget}
+        onChange={setEnableTarget}
+      />
+      {enableTarget && (
+        <Form.FilePicker
+          id="targetPath"
+          title="Target Folder"
+          info="Where the organized folders will be created. Defaults to the source directory."
+          allowMultipleSelection={false}
+          canChooseDirectories
+          canChooseFiles={false}
+        />
+      )}
       <Form.Dropdown
         id="model"
         title="AI Model"
