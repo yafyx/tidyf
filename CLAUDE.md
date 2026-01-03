@@ -76,6 +76,35 @@ The tool installs with multiple command names: `tidyf`, `td`, `tidyfiles`
 | `-m, --model <id>` | Override model (provider/model format) |
 | `-p, --profile <name>` | Use named profile |
 
+## Raycast Extension
+
+The project includes a Raycast extension in `extensions/raycast/` that provides a native macOS GUI for tidyf.
+
+### Extension Commands
+| Command | Mode | Description |
+|---------|------|-------------|
+| Organize Files | view | Interactive folder picker with AI model selection, shows proposals for review |
+| Quick Tidy Downloads | no-view | Instantly organizes `~/Downloads` with high-confidence moves (>80%) |
+
+### Raycast-Specific Architecture
+- **Entry Point**: `src/raycast-index.ts` - Library exports for Raycast, **excludes** watcher and CLI commands to avoid native dependency issues (chokidar/fsevents)
+- **OpenCode Client**: `src/lib/opencode.raycast.ts` - Ephemeral server pattern with PATH fixes for Raycast's limited environment
+- **Core Bridge**: `extensions/raycast/src/utils/core-bridge.ts` - Safe wrappers around tidyf exports
+- **Components**: `extensions/raycast/src/components/` - React components for Raycast UI
+
+### Development Commands (from `extensions/raycast/`)
+```bash
+npm run dev          # ray develop - development mode with hot reload
+npm run build        # ray build -e dist - production build
+npm run lint         # ray lint - check for issues
+npm run fix-lint     # ray lint --fix - auto-fix issues
+```
+
+### Key Considerations
+- **PATH Issues**: Raycast has a limited PATH; `fix-path` and explicit path additions in `opencode.raycast.ts` handle this
+- **No Native Dependencies**: The Raycast build cannot use `chokidar` or other fsevents-based modules
+- **Model Selection**: Uses grouped dropdown by provider, persists selection with `storeValue`
+
 ## Code Conventions
 
 - **Commands**: Export a single async function named `{command}Command` (e.g., `organizeCommand`)
