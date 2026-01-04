@@ -7,6 +7,8 @@ import {
   Toast,
   popToRoot,
   Icon,
+  launchCommand,
+  LaunchType,
 } from "@raycast/api";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -17,7 +19,10 @@ import {
   createOperationHistory,
   recordMove,
   persistHistory,
+  undoFileMove,
+  safeDeleteHistoryEntry,
   type ProviderWithModels,
+  type HistoryEntry,
 } from "./utils/core-bridge";
 import HistoryCommand from "./history-command";
 import SettingsCommand from "./settings-command";
@@ -216,10 +221,68 @@ export default function OrganizeCommand() {
       applyToast.message = `Moved ${movedCount} files. ${failedCount} failed.`;
     } else {
       applyToast.style = Toast.Style.Success;
-      applyToast.title = "Organization Complete";
-      applyToast.message = `Moved ${movedCount} files. Use History to undo.`;
+      applyToast.title = `Organized ${movedCount} files`;
+      applyToast.message = "Press ⌘Z or click Undo";
+
+      // Add actionable undo button to toast
+      applyToast.primaryAction = {
+        title: "Undo",
+        onAction: async () => {
+          await handleUndoOperation(historyEntry);
+        },
+      };
+
+      applyToast.secondaryAction = {
+        title: "View History",
+        onAction: async () => {
+          await launchCommand({
+            name: "history-command",
+            type: LaunchType.UserInitiated,
+          });
+        },
+      };
+
       // Pop back to root after successful organization
       await popToRoot();
+    }
+  };
+
+  /**
+   * Handle undoing an entire operation
+   */
+  const handleUndoOperation = async (entry: HistoryEntry) => {
+    const undoToast = await showToast({
+      style: Toast.Style.Animated,
+      title: "Undoing changes...",
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const move of entry.moves) {
+      const result = await undoFileMove(move.source, move.destination);
+      if (result.success) {
+        successCount++;
+      } else {
+        failCount++;
+        console.error(
+          `Failed to undo: ${move.destination} -> ${move.source}:`,
+          result.error,
+        );
+      }
+    }
+
+    // Delete history entry after undo
+    safeDeleteHistoryEntry(entry.id);
+
+    if (failCount > 0) {
+      undoToast.style = Toast.Style.Failure;
+      undoToast.title = "Partial Undo";
+      undoToast.message = `Restored ${successCount} files. ${failCount} failed.`;
+    } else {
+      undoToast.style = Toast.Style.Success;
+      undoToast.title = "Undo Complete";
+      undoToast.message = `Restored ${successCount} files to original locations.`;
     }
   };
 
