@@ -42,4 +42,4 @@ Access settings through Raycast to configure:
 
 ## Related
 
-- [tidyf CLI](https://github.com/yfyx/tidyf) - The command-line tool this extension is built on
+- [tidyf CLI](https://github.com/yafyx/tidyf) - The command-line tool this extension is built on
