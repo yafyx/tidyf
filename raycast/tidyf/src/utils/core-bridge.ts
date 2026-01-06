@@ -3,22 +3,20 @@ import * as os from "os";
 import * as path from "path";
 import {
   type AnalyzeFilesOptions,
-  addMoveToHistory,
   analyzeFiles,
+  getAvailableModels,
+} from "../lib/opencode";
+import {
+  addMoveToHistory,
   createHistoryEntry,
   deleteHistoryEntry,
-  type FileMetadata,
-  getAvailableModels,
-  getGlobalConfigPath,
   getRecentHistory,
   type HistoryEntry,
-  readConfig,
-  type ScanOptions,
   saveHistoryEntry,
-  scanDirectory,
-  type TidyConfig,
-  writeConfig,
-} from "tidyf";
+} from "../lib/history";
+import { getGlobalConfigPath, readConfig, writeConfig } from "../lib/config";
+import { scanDirectory, type ScanOptions } from "../lib/scanner";
+import type { FileMetadata, TidyConfig } from "../lib/types";
 
 // Redefine ModelSelection locally
 export interface ModelSelection {
@@ -31,7 +29,7 @@ export type {
   FileMoveProposal,
   OrganizationProposal,
   TidyConfig,
-} from "tidyf";
+} from "../lib/types";
 
 // Provider and model types for grouped selection
 type ModelInfo = {

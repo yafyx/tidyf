@@ -11,12 +11,13 @@ import {
   useNavigation,
 } from "@raycast/api";
 import { useEffect, useRef, useState } from "react";
-import { type FileMetadata, moveFile } from "tidyf";
+import { moveFile } from "./lib/files";
 import { ProposalReview } from "./components/ProposalReview";
 import HistoryCommand from "./history-command";
 import SettingsCommand from "./settings-command";
 import {
   createOperationHistory,
+  type FileMetadata,
   type HistoryEntry,
   type ProviderWithModels,
   persistHistory,

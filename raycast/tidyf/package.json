@@ -35,13 +35,6 @@
 			"description": "View and undo recent file organization operations",
 			"mode": "view",
 			"icon": "command-icon.png"
-		},
-		{
-			"name": "settings-command",
-			"title": "Configure Tidyf",
-			"description": "Configure default directories and AI model",
-			"mode": "view",
-			"icon": "command-icon.png"
 		}
 	],
 	"author": "yfyx",
@@ -53,11 +46,13 @@
 	"dependencies": {
     "@raycast/api": "^1.104.1",
 		"@raycast/utils": "^1.12.4",
+   "@opencode-ai/sdk": "^1.0.155",
 		"fix-path": "^5.0.0",
-    "tidyf": "^1.1.1"
+   "mime-types": "^2.1.35"
 	},
 	"devDependencies": {
 		"@raycast/eslint-config": "^1.0.6",
+   "@types/mime-types": "^2.1.4",
 		"@types/node": "20.8.10",
 		"@types/react": "^18.3.3",
 		"eslint": "^8.51.0",

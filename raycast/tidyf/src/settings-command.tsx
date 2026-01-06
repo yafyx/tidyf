@@ -25,7 +25,6 @@ export default function SettingsCommand() {
   const [target, setTarget] = useState("~/Documents/Organized");
   const [model, setModel] = useState("");
   const [readContent, setReadContent] = useState(false);
-  const [watchEnabled, setWatchEnabled] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -40,7 +39,6 @@ export default function SettingsCommand() {
         if (config.defaultSource) setSource(config.defaultSource);
         if (config.defaultTarget) setTarget(config.defaultTarget);
         if (config.readContent) setReadContent(config.readContent);
-        if (config.watchEnabled) setWatchEnabled(config.watchEnabled);
 
         if (config.organizer?.provider && config.organizer?.model) {
           setModel(`${config.organizer.provider}/${config.organizer.model}`);
@@ -75,7 +73,6 @@ export default function SettingsCommand() {
         defaultSource: source,
         defaultTarget: target,
         readContent,
-        watchEnabled,
         organizer: {
           provider: providerId,
           model: modelId,
@@ -161,14 +158,6 @@ export default function SettingsCommand() {
         value={readContent}
         onChange={setReadContent}
         info="Reads text files to help AI categorize better"
-      />
-
-      <Form.Checkbox
-        id="watchEnabled"
-        label="Enable watch mode"
-        value={watchEnabled}
-        onChange={setWatchEnabled}
-        info="Automatically organize new files in source directory (requires running 'tidyf watch')"
       />
     </Form>
   );

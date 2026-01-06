@@ -19,8 +19,6 @@ declare namespace Preferences {
   export type QuickTidy = ExtensionPreferences & {}
   /** Preferences accessible in the `history-command` command */
   export type HistoryCommand = ExtensionPreferences & {}
-  /** Preferences accessible in the `settings-command` command */
-  export type SettingsCommand = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
@@ -30,7 +28,5 @@ declare namespace Arguments {
   export type QuickTidy = {}
   /** Arguments passed to the `history-command` command */
   export type HistoryCommand = {}
-  /** Arguments passed to the `settings-command` command */
-  export type SettingsCommand = {}
 }
 

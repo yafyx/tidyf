@@ -1,5 +1,5 @@
 import { showToast, Toast } from "@raycast/api";
-import { moveFile } from "tidyf";
+import { moveFile } from "./lib/files";
 import {
   createOperationHistory,
   persistHistory,

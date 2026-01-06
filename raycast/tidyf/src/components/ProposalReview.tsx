@@ -11,7 +11,7 @@ import {
   Toast,
 } from "@raycast/api";
 import { useMemo, useState } from "react";
-import type { OrganizationProposal } from "tidyf";
+import type { OrganizationProposal } from "../lib/types";
 import type { ProviderWithModels } from "../utils/core-bridge";
 
 // Define local interfaces to workaround type mismatch with Raycast
