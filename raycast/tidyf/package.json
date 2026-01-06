@@ -54,7 +54,7 @@
     "@raycast/api": "^1.104.1",
 		"@raycast/utils": "^1.12.4",
 		"fix-path": "^5.0.0",
-		"tidyf": "file:../../"
+    "tidyf": "^1.1.1"
 	},
 	"devDependencies": {
 		"@raycast/eslint-config": "^1.0.6",
