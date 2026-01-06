@@ -1,6 +1,5 @@
 <div align="center">
-  <img src="logo.svg#gh-light-mode-only" width="120" alt="tidyf logo" />
-  <img src="logo-white.svg#gh-dark-mode-only" width="120" alt="tidyf logo" />
+  <img src="media/logo.png" width="120" alt="tidyf logo" />
 </div>
 
 <h1 align="center">tidyf</h1>

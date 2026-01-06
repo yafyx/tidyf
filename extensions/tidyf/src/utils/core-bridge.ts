@@ -1,25 +1,24 @@
 import { showToast, Toast } from "@raycast/api";
-import {
-  scanDirectory,
-  analyzeFiles,
-  type ScanOptions,
-  type AnalyzeFilesOptions,
-  type FileMetadata,
-  createHistoryEntry,
-  addMoveToHistory,
-  saveHistoryEntry,
-  getRecentHistory,
-  deleteHistoryEntry,
-  type HistoryEntry,
-  getGlobalConfigPath,
-  readConfig,
-  writeConfig,
-  type TidyConfig,
-} from "tidyf";
-import { getAvailableModels } from "tidyf";
-
-import * as path from "path";
 import * as os from "os";
+import * as path from "path";
+import {
+  type AnalyzeFilesOptions,
+  addMoveToHistory,
+  analyzeFiles,
+  createHistoryEntry,
+  deleteHistoryEntry,
+  type FileMetadata,
+  getAvailableModels,
+  getGlobalConfigPath,
+  getRecentHistory,
+  type HistoryEntry,
+  readConfig,
+  type ScanOptions,
+  saveHistoryEntry,
+  scanDirectory,
+  type TidyConfig,
+  writeConfig,
+} from "tidyf";
 
 // Redefine ModelSelection locally
 export interface ModelSelection {
@@ -29,8 +28,8 @@ export interface ModelSelection {
 
 export type {
   FileMetadata,
-  OrganizationProposal,
   FileMoveProposal,
+  OrganizationProposal,
   TidyConfig,
 } from "tidyf";
 
