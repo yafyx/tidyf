@@ -75,6 +75,19 @@
 - **Customizable rules** - Edit `~/.tidy/rules.md` to customize organization rules
 - **Conflict handling** - Smart handling of duplicate files
 - **Multiple aliases** - Use `tidyf` or `td`
+- **Raycast extension** - Native macOS GUI for quick file organization
+
+## Raycast Extension
+
+A native Raycast extension for organizing files with a beautiful GUI. *(Coming soon to the Raycast Store)*
+
+<div align="center">
+  <img src="raycast/tidyf/metadata/tidyf-1.png" width="600" alt="Raycast extension - folder and model selection" />
+  <br /><br />
+  <img src="raycast/tidyf/metadata/tidyf-2.png" width="600" alt="Raycast extension - file proposals with confidence" />
+  <br /><br />
+  <img src="raycast/tidyf/metadata/tidyf-3.png" width="600" alt="Raycast extension - quick actions" />
+</div>
 
 ## Installation
 
